@@ -43,26 +43,22 @@ def has_token() -> bool:
     return bool(get_token())
 
 
-def _open(url: str, token: str):
-    req = urllib.request.Request(url, headers={
-        "Authorization": f"token {token}",
-        "Accept": "application/vnd.github+json",
-        "User-Agent": "VoiceStudio-Updater",
-    })
+def _open(url: str, token: str = ""):
+    headers = {"Accept": "application/vnd.github+json", "User-Agent": "VoiceStudio-Updater"}
+    if token:  # 비공개 저장소용(공개면 없어도 됨)
+        headers["Authorization"] = f"token {token}"
+    req = urllib.request.Request(url, headers=headers)
     return urllib.request.urlopen(req, timeout=120)
 
 
 def check_and_update() -> dict:
-    token = get_token()
-    if not token:
-        return {"ok": False, "need_token": True,
-                "message": "GitHub 토큰이 없습니다. 설정 탭에서 토큰을 저장하세요."}
+    token = get_token()  # 공개 저장소면 없어도 동작
     owner, repo, branch = _cfg()
     try:
         with _open(f"https://api.github.com/repos/{owner}/{repo}/commits/{branch}", token) as r:
             latest = json.loads(r.read().decode("utf-8"))["sha"]
     except Exception as e:
-        return {"ok": False, "message": f"업데이트 확인 실패 (토큰/네트워크 확인): {e}"}
+        return {"ok": False, "message": f"업데이트 확인 실패 (네트워크/저장소 공개 여부 확인): {e}"}
 
     current = VERSION_FILE.read_text(encoding="utf-8").strip() if VERSION_FILE.exists() else ""
     if latest == current:
