@@ -86,6 +86,8 @@ def _start_server(timeout: int = 300):
         if not SOVITS_PY.exists():
             raise RuntimeError("GPT-SoVITS venv 가 없습니다. `.\\setup.ps1 -SoVITS` 를 실행하세요.")
         cfg = _write_config()
+        # fast_langdetect(언어 감지) 캐시 폴더가 없으면 tts 가 실패하므로 미리 생성.
+        (SOVITS_DIR / "GPT_SoVITS" / "pretrained_models" / "fast_langdetect").mkdir(parents=True, exist_ok=True)
         cmd = [str(SOVITS_PY), "api_v2.py", "-a", "127.0.0.1", "-p", str(PORT),
                "-c", str(cfg.name)]
         # 서버 출력을 로그로 남겨 크래시 원인을 앱에서 볼 수 있게 한다.
