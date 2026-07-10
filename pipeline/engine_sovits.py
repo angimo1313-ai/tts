@@ -293,7 +293,11 @@ def finetune(voice_id: str, name: str, dataset_dir: Path, out_dir: Path,
             except Exception:
                 pass
     proc.wait()
-    if proc.returncode != 0 or not result.get("sovits") or not result.get("gpt"):
+    # 성공 판정은 '가중치 파일이 실제로 생성됐는가'로 한다. 워커가 결과를 다 만들고도
+    # torch 인터프리터 종료 잡음으로 returncode!=0 이 될 수 있어 종료코드는 신뢰하지 않는다.
+    sovits_ok = bool(result.get("sovits")) and os.path.exists(result["sovits"])
+    gpt_ok = bool(result.get("gpt")) and os.path.exists(result["gpt"])
+    if not (sovits_ok and gpt_ok):
         raise RuntimeError("파인튜닝 실패. GPU 메모리/로그를 확인하세요.")
 
     # voice.json 에 파인튜닝 가중치 등록

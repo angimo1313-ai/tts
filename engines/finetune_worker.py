@@ -217,4 +217,10 @@ if __name__ == "__main__":
         import traceback
         ev(step="error", msg=str(e))
         traceback.print_exc()
-        sys.exit(1)
+        sys.stdout.flush()
+        os._exit(1)
+    # torch 를 임포트한 프로세스는 Windows 에서 인터프리터 정상 종료 중 0 이 아닌
+    # 코드로 죽는 일이 있다. 결과는 이미 flush 했으니 즉시 깔끔하게 종료한다.
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(0)
