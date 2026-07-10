@@ -2,16 +2,24 @@
 # 실행: irm https://raw.githubusercontent.com/angimo1313-ai/tts/main/scripts/self_update.ps1 | iex
 $ErrorActionPreference = "Stop"
 
-# 앱 폴더 자동 탐지 — 현재 폴더 우선, 그다음 흔한 설치 경로들.
-# (irm|iex 로 실행 시엔 먼저 'cd 앱폴더' 하면 현재 폴더로 잡힘)
+# 앱 폴더 자동 탐지 — .venv 에 uvicorn 이 실제로 설치된(=제대로 깔린) 폴더를 우선한다.
+# (덜 깔린 껍데기 폴더에 코드를 덮어 실행 실패하던 문제 방지)
+function Test-AppReady($dir) {
+  $py = Join-Path $dir ".venv\Scripts\python.exe"
+  if (-not (Test-Path $py)) { return $false }
+  & $py -c "import uvicorn" 2>$null | Out-Null
+  return ($LASTEXITCODE -eq 0)
+}
 $cands = @(
   (Get-Location).Path,
-  "C:\VoiceStudio",
   "$env:LOCALAPPDATA\Programs\Voice Studio",
   "C:\Users\Public\VoiceStudio",
-  "$([Environment]::GetFolderPath('Desktop'))\Voice Studio"
-)
-$app = $cands | Where-Object { $_ -and (Test-Path (Join-Path $_ "launcher.pyw")) } | Select-Object -First 1
+  "$([Environment]::GetFolderPath('Desktop'))\Voice Studio",
+  "C:\VoiceStudio"
+) | Where-Object { $_ -and (Test-Path (Join-Path $_ "launcher.pyw")) }
+# 1순위: uvicorn 이 설치된 완전한 폴더. 없으면 그냥 첫 후보.
+$app = $cands | Where-Object { Test-AppReady $_ } | Select-Object -First 1
+if (-not $app) { $app = $cands | Select-Object -First 1 }
 if (-not $app) {
   Write-Host "Voice Studio 설치 폴더를 찾지 못했습니다." -ForegroundColor Red
   Write-Host "앱 폴더로 이동한 뒤 다시 실행하세요:  cd '앱폴더경로'  그리고 원라이너 재실행" -ForegroundColor Yellow
