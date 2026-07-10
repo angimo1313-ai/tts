@@ -399,26 +399,39 @@ def restart_app():
 
 
 def _schedule_restart():
-    """분리된 프로세스로 앱을 껐다 켠다(자동 재시작). 응답이 나간 뒤 실행되도록 지연."""
+    """앱을 껐다 켠다(자동 재시작).
+
+    scripts/restart.ps1 을 '완전히 분리된' PowerShell 로 띄운다. 이 스크립트는
+      1) 이 앱 폴더의 python/pythonw(런처+서버) 만 정확히 종료(pywebview 창 닫힘)
+      2) 포트 7860 해제 대기
+      3) launcher.pyw 재실행
+    을 하고 모든 단계를 data/restart.log 에 남긴다.
+
+    핵심: 이 서버(pythonw)의 자식으로 뜨면 python 을 죽일 때 함께 죽어 재실행이
+    안 되므로 DETACHED_PROCESS | CREATE_BREAKAWAY_FROM_JOB 로 Job/부모에서 떼어낸다.
+    """
     import subprocess
     pyw = ROOT / ".venv" / "Scripts" / "pythonw.exe"
-    launcher = ROOT / "launcher.pyw"
-    if not pyw.exists():
+    script = ROOT / "scripts" / "restart.ps1"
+    if not pyw.exists() or not script.exists():
         return
-    appprofile = str(ROOT / ".appprofile")
-    ps = (
-        "Start-Sleep -Seconds 2; "
-        # 앱 창(Chrome/Edge 앱 모드)까지 종료 — .appprofile 을 쓰는 프로세스
-        f"Get-CimInstance Win32_Process | Where-Object {{ $_.CommandLine -like '*{appprofile}*' }} | "
-        "ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }; "
-        # 서버·런처(python/pythonw) 종료 (pywebview 창 포함)
-        "Get-Process pythonw,python -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; "
-        "Start-Sleep -Seconds 1; "
-        f"Start-Process '{pyw}' -ArgumentList 'launcher.pyw' -WorkingDirectory '{ROOT}'"
-    )
-    DETACHED = 0x00000008
-    subprocess.Popen(["powershell", "-NoProfile", "-WindowStyle", "Hidden", "-Command", ps],
-                     creationflags=DETACHED)
+    args = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass",
+            "-WindowStyle", "Hidden", "-File", str(script), "-Root", str(ROOT)]
+    # 주의: DETACHED_PROCESS(0x8) 를 쓰면 powershell 이 유효한 표준 핸들/콘솔 없이 떠서
+    # 스크립트 본문을 실행하기도 전에 죽는다(자동 재시작이 안 되던 진짜 원인).
+    # CREATE_NO_WINDOW(숨김 콘솔 유지) + std 핸들 DEVNULL 로 띄워야 정상 실행되고,
+    # NEW_PROCESS_GROUP | BREAKAWAY_FROM_JOB 로 부모(서버)가 죽어도 살아남는다.
+    CREATE_NO_WINDOW = 0x08000000
+    CREATE_NEW_PROCESS_GROUP = 0x00000200
+    CREATE_BREAKAWAY_FROM_JOB = 0x01000000
+    dn = subprocess.DEVNULL
+    flags = CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP | CREATE_BREAKAWAY_FROM_JOB
+    try:
+        subprocess.Popen(args, creationflags=flags, stdin=dn, stdout=dn, stderr=dn, close_fds=True)
+    except OSError:
+        # Job 이 breakaway 를 막는 환경 → 플래그 낮춰 재시도
+        subprocess.Popen(args, creationflags=CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP,
+                         stdin=dn, stdout=dn, stderr=dn, close_fds=True)
 
 
 # ================= Static / outputs =================
