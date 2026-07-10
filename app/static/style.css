@@ -214,7 +214,14 @@ input[type="range"]::-webkit-slider-thumb {
   background: var(--field-bg); cursor: pointer;
   font-size: 14px; transition: all 0.2s var(--ease);
 }
+.voice-chip { display: inline-flex; align-items: center; gap: 9px; }
 .voice-chip.selected { background: var(--accent); color: #fff; border-color: var(--accent); }
+.chip-x {
+  border: none; background: transparent; color: inherit; opacity: 0.45;
+  cursor: pointer; font-size: 11px; padding: 0; line-height: 1;
+  font-family: var(--font);
+}
+.chip-x:hover { opacity: 1; }
 .empty-hint { font-size: 14px; color: var(--text-sub); }
 .empty-hint a { color: var(--accent); text-decoration: none; }
 

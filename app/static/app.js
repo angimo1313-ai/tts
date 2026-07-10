@@ -113,16 +113,40 @@ async function loadVoices() {
   try {
     const voices = await (await api("/api/voices")).json();
     const picker = $("#voicePicker");
-    if (!voices.length) return; // keep empty hint
+    if (!voices.length) {
+      SELECTED_VOICE = null;
+      picker.innerHTML = '<div class="empty-hint">학습된 목소리가 없습니다. <a href="#" data-goto="train">목소리 학습</a>에서 먼저 만들어 주세요.</div>';
+      return;
+    }
     picker.innerHTML = "";
     voices.forEach((v, i) => {
       const chip = document.createElement("div");
       chip.className = "voice-chip" + (i === 0 ? " selected" : "");
-      chip.textContent = v.name;
-      chip.addEventListener("click", () => {
+      const label = document.createElement("span");
+      label.textContent = v.name;
+      const del = document.createElement("button");
+      del.className = "chip-x";
+      del.textContent = "✕";
+      del.title = "이 목소리 삭제";
+      chip.appendChild(label);
+      chip.appendChild(del);
+      chip.addEventListener("click", (e) => {
+        if (e.target === del) return;
         $$(".voice-chip").forEach((c) => c.classList.remove("selected"));
         chip.classList.add("selected");
         SELECTED_VOICE = v.id;
+      });
+      del.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        if (!confirm(`'${v.name}' 목소리를 삭제할까요? 되돌릴 수 없습니다.`)) return;
+        try {
+          await api("/api/voices/delete", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: v.id }),
+          });
+          if (SELECTED_VOICE === v.id) SELECTED_VOICE = null;
+          loadVoices();
+        } catch (err) { alert("삭제 실패: " + err.message); }
       });
       picker.appendChild(chip);
     });
@@ -188,7 +212,8 @@ $("#generateBtn").addEventListener("click", async () => {
     const data = await res.json();
     $("#genStatus").textContent = "완료!";
     $("#audioPlayer").src = data.url + "?t=" + Date.now();
-    $("#downloadBtn").href = data.url;
+    LAST_FILE = data.url.split("/").pop();
+    $("#downloadMsg").textContent = "";
     $("#genResult").classList.remove("hidden");
   } catch (e) {
     alert("생성 실패: " + e.message);
@@ -297,6 +322,25 @@ $("#updateBtn").addEventListener("click", async () => {
   }
 });
 
+// ---------- Download (pywebview: Downloads 폴더로 저장) ----------
+let LAST_FILE = null;
+async function saveToDownloads(file, msgEl) {
+  if (!file) return;
+  if (msgEl) msgEl.textContent = "저장 중…";
+  try {
+    const r = await (await api("/api/download", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ file }),
+    })).json();
+    const m = "Downloads에 저장됨: " + r.name;
+    if (msgEl) msgEl.textContent = m; else alert(m);
+  } catch (e) {
+    const m = "저장 실패: " + e.message;
+    if (msgEl) msgEl.textContent = m; else alert(m);
+  }
+}
+$("#downloadBtn").addEventListener("click", () => saveToDownloads(LAST_FILE, $("#downloadMsg")));
+
 // ---------- Library (보관함) ----------
 function esc(s) {
   return (s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -329,9 +373,10 @@ async function loadLibrary() {
         </div>
         <audio controls src="${it.url}"></audio>
         <div class="lib-actions">
-          <a class="icon-btn" href="${it.url}" download>다운로드</a>
+          <button class="icon-btn dl">다운로드</button>
           <button class="icon-btn danger" data-file="${esc(it.file)}">삭제</button>
         </div>`;
+      el.querySelector(".dl").addEventListener("click", () => saveToDownloads(it.file, null));
       el.querySelector(".danger").addEventListener("click", async () => {
         if (!confirm("이 음성을 삭제할까요? 되돌릴 수 없습니다.")) return;
         await api("/api/history/delete", {

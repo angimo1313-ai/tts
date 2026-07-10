@@ -184,6 +184,57 @@ def delete_history(req: DeleteReq):
     return {"ok": True}
 
 
+@app.post("/api/download")
+def download_to_downloads(req: DeleteReq):
+    """pywebview(WebView2)에서는 <a download> 가 안 되므로, 파일을 사용자
+    Downloads 폴더에 복사해 준다."""
+    import os
+    name = Path(req.file).name
+    src = OUTPUTS / name
+    if not src.exists():
+        raise HTTPException(404, "파일을 찾을 수 없습니다.")
+    downloads = Path(os.path.expanduser("~")) / "Downloads"
+    downloads.mkdir(parents=True, exist_ok=True)
+    dst = downloads / name
+    # 같은 이름 있으면 번호 붙이기
+    if dst.exists():
+        stem, suf = dst.stem, dst.suffix
+        i = 1
+        while (downloads / f"{stem}_{i}{suf}").exists():
+            i += 1
+        dst = downloads / f"{stem}_{i}{suf}"
+    shutil.copy(src, dst)
+    return {"saved": str(dst), "name": dst.name}
+
+
+# ================= Voices (목소리 관리) =================
+class VoiceDeleteReq(BaseModel):
+    id: str
+
+
+@app.post("/api/voices/delete")
+def delete_voice(req: VoiceDeleteReq):
+    vid = Path(req.id).name  # traversal 방지
+    vdir = VOICES_DIR / vid
+    if not vdir.exists():
+        raise HTTPException(404, "목소리를 찾을 수 없습니다.")
+    shutil.rmtree(vdir, ignore_errors=True)
+    # 누적 데이터셋도 정리
+    for d in ((DATA / "datasets" / vid), (DATA / "raw" / vid)):
+        shutil.rmtree(d, ignore_errors=True)
+    return {"ok": True}
+
+
+@app.post("/api/open-outputs")
+def open_outputs():
+    import subprocess
+    try:
+        subprocess.Popen(["explorer.exe", str(OUTPUTS)])
+    except Exception as e:
+        raise HTTPException(500, str(e))
+    return {"ok": True}
+
+
 # ================= Train (streaming NDJSON) =================
 @app.post("/api/train")
 def train(req: TrainReq):
