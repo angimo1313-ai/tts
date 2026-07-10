@@ -1,4 +1,4 @@
-﻿# Voice Studio 자체 업데이트 — 최신 코드 적용 + pywebview 보장 + 자동 재실행
+# Voice Studio 자체 업데이트 — 최신 코드 적용 + pywebview 보장 + 자동 재실행
 # 실행: irm https://raw.githubusercontent.com/angimo1313-ai/tts/main/scripts/self_update.ps1 | iex
 $ErrorActionPreference = "Stop"
 
