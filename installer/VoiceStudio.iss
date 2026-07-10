@@ -10,7 +10,7 @@
 #define AppPublisher "Voice Studio"
 
 [Setup]
-AppId={{9F5B2E10-6C4A-4E3B-9A21-VOICESTUDIO01}
+AppId={{9F5B2E10-6C4A-4E3B-9A21-3D5E7F9A1B2C}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher={#AppPublisher}
@@ -31,24 +31,27 @@ Name: "korean"; MessagesFile: "compiler:Languages\Korean.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "바탕화면 바로가기 만들기"; GroupDescription: "추가 작업:"
-Name: "runsetup"; Description: "지금 환경 설치 (인터넷 필요, 수 GB 다운로드 · 수십 분)"; GroupDescription: "설치 후:"
-Name: "sovits"; Description: "한국어 엔진(GPT-SoVITS)도 함께 설치"; GroupDescription: "설치 후:"; Flags: unchecked
+Name: "runsetup"; Description: "설치 후 바로 '환경 설치' 시작 (인터넷 필요, 수 GB · 수십 분)"; GroupDescription: "설치 후:"
+Name: "sovits"; Description: "한국어 엔진(GPT-SoVITS)도 함께 설치"; GroupDescription: "설치 후:"
 
 [Files]
 ; 소스 일체 복사 — 대용량/생성물/클론레포는 제외
-Source: "..\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion; \
+Source: "..\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion; \
   Excludes: "\.venv\*,\.venv-sovits\*,\engines\GPT-SoVITS\*,\outputs\*.wav,\outputs\history.jsonl,\data\raw\*,\data\datasets\*,\data\voices\*,\tools\ffmpeg\*,\.git\*,\installer\Output\*,__pycache__\*,*.pyc"
 
 [Icons]
+; 앱 실행 (환경 설치 후 동작). 콘솔 없이 pythonw 로 런처 실행.
 Name: "{group}\Voice Studio"; Filename: "{app}\.venv\Scripts\pythonw.exe"; Parameters: """{app}\launcher.pyw"""; WorkingDir: "{app}"; IconFilename: "{app}\app\static\icon.ico"
 Name: "{userdesktop}\Voice Studio"; Filename: "{app}\.venv\Scripts\pythonw.exe"; Parameters: """{app}\launcher.pyw"""; WorkingDir: "{app}"; IconFilename: "{app}\app\static\icon.ico"; Tasks: desktopicon
+; 환경 설치 (최초 1회, 진행상황 보임). 다운로드 실패 시 이 아이콘으로 재시도.
+Name: "{group}\환경 설치 (최초 1회)"; Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -NoProfile -NoExit -File ""{app}\setup.ps1"" -SoVITS"; WorkingDir: "{app}"; IconFilename: "{app}\app\static\icon.ico"
 
 [Run]
-; 환경 설치 (선택). -SoVITS 여부는 sovits 태스크로 분기.
+; 설치 직후 환경 설치를 '보이는' PowerShell 창으로 시작(선택). nowait 로 위저드는 바로 종료.
 Filename: "powershell.exe"; \
-  Parameters: "-ExecutionPolicy Bypass -NoProfile -File ""{app}\setup.ps1"" {code:GetSoVITSFlag}"; \
-  WorkingDir: "{app}"; StatusMsg: "환경을 설치하는 중입니다 (수십 분 소요될 수 있습니다)..."; \
-  Flags: runhidden waituntilterminated; Tasks: runsetup
+  Parameters: "-ExecutionPolicy Bypass -NoProfile -NoExit -File ""{app}\setup.ps1"" {code:GetSoVITSFlag}"; \
+  WorkingDir: "{app}"; Description: "환경 설치 시작"; \
+  Flags: postinstall nowait skipifsilent; Tasks: runsetup
 
 [Code]
 function GetSoVITSFlag(Param: String): String;
