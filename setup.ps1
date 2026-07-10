@@ -21,6 +21,14 @@ Set-Location $Root
 function Info($m) { Write-Host "`n=== $m ===" -ForegroundColor Cyan }
 function Ok($m)   { Write-Host "  $m" -ForegroundColor Green }
 
+# ---------- 0. uv 데이터 위치를 앱 폴더 안으로 (중요) ----------
+# 일부 PC 는 AppData\Roaming 이 OneDrive/로밍프로필로 "신뢰할 수 없는 탑재 지점"이 되어
+# uv 기본 파이썬 위치(Roaming\uv\python)를 읽지 못한다(os error 448). 앱 폴더(로컬)로 돌린다.
+$env:UV_PYTHON_INSTALL_DIR = Join-Path $Root ".uvhome\python"
+$env:UV_CACHE_DIR          = Join-Path $Root ".uvhome\cache"
+New-Item -ItemType Directory -Force $env:UV_PYTHON_INSTALL_DIR | Out-Null
+New-Item -ItemType Directory -Force $env:UV_CACHE_DIR | Out-Null
+
 # ---------- 1. uv 확인/설치 ----------
 Info "uv 확인"
 if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
@@ -35,9 +43,10 @@ Info "Python 3.10 준비"
 uv python install 3.10
 Ok "완료"
 
-# ---------- 3. 앱(경량) 의존성 ----------
-Info "앱 의존성 설치 (FastAPI, yt-dlp 등)"
-uv sync
+# ---------- 3. venv 생성 + 앱(경량) 의존성 ----------
+Info "가상환경(.venv) 생성 + 앱 의존성 설치 (FastAPI, yt-dlp 등)"
+uv venv --python 3.10 .venv
+uv pip install --python .venv fastapi "uvicorn[standard]" python-multipart yt-dlp pydantic
 Ok "완료"
 
 if ($Light) { Ok "Light 모드 — 여기까지. run.ps1 로 GUI 실행 가능"; exit 0 }
@@ -63,26 +72,26 @@ if (-not (Test-Path (Join-Path $ffmpegBin "ffmpeg.exe"))) {
 # ---------- 5. PyTorch ----------
 Info "PyTorch 설치"
 if ($Cpu) {
-  uv pip install torch torchaudio
+  uv pip install --python .venv torch torchaudio
 } else {
   # CUDA 11.8 (GTX 10xx / RTX 20xx 호환)
-  uv pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu118
+  uv pip install --python .venv torch torchaudio --index-url https://download.pytorch.org/whl/cu118
 }
 Ok "완료"
 
 # ---------- 6. 전처리 스택 ----------
 Info "전처리 스택 설치 (faster-whisper, demucs, soundfile)"
-uv pip install faster-whisper demucs soundfile librosa
+uv pip install --python .venv faster-whisper demucs soundfile librosa
 Ok "완료"
 
 # ---------- 7. F5-TTS ----------
 Info "F5-TTS 설치"
-uv pip install f5-tts
+uv pip install --python .venv f5-tts
 # 초신형 transformers/datasets 5.x + pyarrow 24 는 Windows 에서 네이티브 충돌을 일으킴.
 # F5-TTS 가 검증된 안정 조합으로 핀 고정하고, 깨진 torchcodec(선택 의존성) 제거.
 Ok "안정 버전 핀 고정 (transformers/datasets/pyarrow)"
-uv pip install "transformers==4.49.0" "datasets==3.6.0" "pyarrow==17.0.0"
-uv pip uninstall torchcodec 2>$null
+uv pip install --python .venv "transformers==4.49.0" "datasets==3.6.0" "pyarrow==17.0.0"
+uv pip uninstall --python .venv torchcodec 2>$null
 Ok "완료"
 
 # ---------- 8. (옵션) GPT-SoVITS (한국어 주력 엔진) ----------

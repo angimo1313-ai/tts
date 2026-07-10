@@ -37,7 +37,7 @@ Name: "sovits"; Description: "한국어 엔진(GPT-SoVITS)도 함께 설치"; Gr
 [Files]
 ; 소스 일체 복사 — 대용량/생성물/클론레포는 제외
 Source: "..\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion; \
-  Excludes: "\.venv\*,\.venv-sovits\*,\engines\GPT-SoVITS\*,\outputs\*.wav,\outputs\history.jsonl,\data\raw\*,\data\datasets\*,\data\voices\*,\tools\ffmpeg\*,\.git\*,\installer\Output\*,__pycache__\*,*.pyc"
+  Excludes: "\.venv\*,\.venv-sovits\*,\.uvhome\*,\engines\GPT-SoVITS\*,\outputs\*.wav,\outputs\history.jsonl,\data\raw\*,\data\datasets\*,\data\voices\*,\tools\ffmpeg\*,\.git\*,\installer\Output\*,__pycache__\*,*.pyc"
 
 [Icons]
 ; 앱 실행 (환경 설치 후 동작). 콘솔 없이 pythonw 로 런처 실행.

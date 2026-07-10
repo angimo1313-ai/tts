@@ -1,6 +1,7 @@
 # ===== Python / uv 환경 =====
 .venv/
 .venv-sovits/
+.uvhome/
 __pycache__/
 *.pyc
 uv.lock
