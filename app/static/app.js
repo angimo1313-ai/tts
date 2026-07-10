@@ -465,7 +465,50 @@ if (_ftBtn) _ftBtn.addEventListener("click", async () => {
   }
 });
 
+// ---------- Auto update check (켤 때 새 버전 배너) ----------
+async function checkUpdateOnLaunch() {
+  try {
+    const r = await (await api("/api/update-check")).json();
+    if (r.available) {
+      $("#updateBannerText").textContent = `새 버전이 있습니다 (${r.version || ""}).`;
+      $("#updateBanner").classList.remove("hidden");
+    }
+  } catch (e) {}
+}
+const _updNow = $("#updateNowBtn");
+if (_updNow) _updNow.addEventListener("click", async () => {
+  _updNow.disabled = true;
+  $("#updateBannerText").textContent = "업데이트 중… 잠시 후 자동으로 재시작됩니다.";
+  try {
+    const r = await (await api("/api/update", { method: "POST" })).json();
+    $("#updateBannerText").textContent = r.message || "업데이트 완료.";
+  } catch (e) {
+    $("#updateBannerText").textContent = "업데이트 실패: " + e.message;
+    _updNow.disabled = false;
+  }
+});
+const _updX = $("#updateDismiss");
+if (_updX) _updX.addEventListener("click", () => $("#updateBanner").classList.add("hidden"));
+
+// ---------- Log viewer (로그창) ----------
+async function loadLogs() {
+  const box = $("#logBox");
+  if (!box) return;
+  const src = $("#logSource") ? $("#logSource").value : "sovits";
+  box.textContent = "불러오는 중…";
+  try {
+    const r = await (await api("/api/logs?source=" + src)).json();
+    box.textContent = r.text || "(로그 없음)";
+    box.scrollTop = box.scrollHeight;
+  } catch (e) {
+    box.textContent = "로그를 불러올 수 없습니다: " + e.message;
+  }
+}
+if ($("#logRefresh")) $("#logRefresh").addEventListener("click", loadLogs);
+if ($("#logSource")) $("#logSource").addEventListener("change", loadLogs);
+
 // ---------- init ----------
 loadVoices();
 loadDeviceInfo();
 loadFinetuneVoices();
+checkUpdateOnLaunch();

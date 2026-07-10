@@ -8,6 +8,6 @@ if (-not (Test-Path $pyw)) {
   exit 1
 }
 
-# pythonw 런처 → 서버(창 없음) + Chrome 앱 창. run.ps1 은 바로 종료(콘솔 안 남음).
-Start-Process $pyw -ArgumentList "launcher.pyw" -WorkingDirectory $PSScriptRoot
-Write-Host "Voice Studio 를 실행했습니다 — 앱 창이 곧 뜹니다." -ForegroundColor Cyan
+# 네이티브 GUI(PySide6) 실행 — 콘솔·웹뷰 없이 진짜 프로그램 창.
+Start-Process $pyw -ArgumentList "app_native.py" -WorkingDirectory $PSScriptRoot
+Write-Host "Voice Studio 를 실행했습니다 — 프로그램 창이 곧 뜹니다." -ForegroundColor Cyan

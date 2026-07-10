@@ -51,7 +51,7 @@ Ok "Python: $py310"
 # ---------- 3. venv 생성 + 앱(경량) 의존성 ----------
 Info "가상환경(.venv) 생성 + 앱 의존성 설치 (FastAPI, yt-dlp 등)"
 uv venv --python $py310 .venv
-uv pip install --python .venv fastapi "uvicorn[standard]" python-multipart yt-dlp pydantic pywebview
+uv pip install --python .venv fastapi "uvicorn[standard]" python-multipart yt-dlp pydantic PySide6
 Ok "완료"
 
 if ($Light) { Ok "Light 모드 — 여기까지. run.ps1 로 GUI 실행 가능"; exit 0 }

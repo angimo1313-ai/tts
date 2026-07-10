@@ -353,6 +353,32 @@ def save_github_token(req: TokenReq):
     return {"ok": True, "set": updater.has_token()}
 
 
+@app.get("/api/update-check")
+def update_check():
+    from app import updater
+    try:
+        return updater.check_only()
+    except Exception:
+        return {"available": False}
+
+
+@app.get("/api/logs")
+def get_logs(source: str = "sovits", lines: int = 300):
+    paths = {
+        "sovits": ROOT / "engines" / "GPT-SoVITS" / "sovits_server.log",
+        "server": DATA / "server.log",
+    }
+    p = paths.get(source)
+    if not p or not p.exists():
+        return {"text": "(아직 로그가 없습니다.)", "source": source}
+    try:
+        content = p.read_text(encoding="utf-8", errors="ignore")
+    except Exception as e:
+        return {"text": f"(로그 읽기 실패: {e})", "source": source}
+    tail = "\n".join(content.splitlines()[-lines:])
+    return {"text": tail or "(로그 비어있음)", "source": source}
+
+
 @app.post("/api/update")
 def do_update():
     from app import updater
@@ -379,8 +405,13 @@ def _schedule_restart():
     launcher = ROOT / "launcher.pyw"
     if not pyw.exists():
         return
+    appprofile = str(ROOT / ".appprofile")
     ps = (
         "Start-Sleep -Seconds 2; "
+        # 앱 창(Chrome/Edge 앱 모드)까지 종료 — .appprofile 을 쓰는 프로세스
+        f"Get-CimInstance Win32_Process | Where-Object {{ $_.CommandLine -like '*{appprofile}*' }} | "
+        "ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }; "
+        # 서버·런처(python/pythonw) 종료 (pywebview 창 포함)
         "Get-Process pythonw,python -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; "
         "Start-Sleep -Seconds 1; "
         f"Start-Process '{pyw}' -ArgumentList 'launcher.pyw' -WorkingDirectory '{ROOT}'"

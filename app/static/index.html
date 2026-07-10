@@ -236,7 +236,19 @@
             <button class="btn primary" id="updateBtn">업데이트 확인 및 적용</button>
             <span class="hint" id="updateStatus" style="margin:0;"></span>
           </div>
-          <div class="hint">공개 저장소라 별도 설정 없이 이 버튼만 누르면 최신 코드로 업데이트됩니다. (git·토큰 불필요) 업데이트 후 앱을 껐다 켜면 반영됩니다.</div>
+          <div class="hint">공개 저장소라 별도 설정 없이 이 버튼만 누르면 최신 코드로 업데이트되고 자동 재시작됩니다.</div>
+        </div>
+
+        <div class="field">
+          <label>로그 보기</label>
+          <div class="row" style="align-items:center; gap:10px;">
+            <select id="logSource" class="log-select">
+              <option value="sovits">GPT-SoVITS 엔진</option>
+              <option value="server">앱 서버</option>
+            </select>
+            <button class="btn ghost" id="logRefresh">새로고침</button>
+          </div>
+          <pre class="log" id="logBox" style="max-height:280px; margin-top:10px;">새로고침을 눌러 로그를 확인하세요.</pre>
         </div>
 
         <div class="about">Voice Studio · 로컬 실행 · 오픈소스 TTS</div>

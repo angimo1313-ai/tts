@@ -53,31 +53,20 @@ def _find_browser():
 
 
 def _open_window():
-    """앱 창을 열고, 창이 닫힐 때까지 블록."""
-    # 1) pywebview — 진짜 네이티브 창(WebView2). 창을 닫으면 반환.
+    """네이티브 창(pywebview/WebView2)을 열고 창이 닫힐 때까지 블록.
+    브라우저(크롬 앱) 방식은 쓰지 않는다 — 진짜 프로그램 창으로만 동작."""
     try:
         import webview
-        webview.create_window("Voice Studio", URL, width=1180, height=860, min_size=(900, 640))
-        webview.start()
-        return
     except Exception:
-        pass
-    # 2) 폴백: Chrome/Edge 앱 모드(프레임 없는 창)
-    browser = _find_browser()
-    if browser:
-        prof = ROOT / ".appprofile"
-        proc = subprocess.Popen([
-            browser, f"--app={URL}", f"--user-data-dir={prof}",
-            "--no-first-run", "--no-default-browser-check",
-            "--window-size=1180,860",
-        ])
-        proc.wait()
+        _msgbox("네이티브 창 구성요소(pywebview)가 없습니다.\n'업데이트'를 한 번 실행해 주세요.")
+        # 최후: 기본 브라우저
+        import webbrowser
+        webbrowser.open(URL)
+        while http_ready():
+            time.sleep(2)
         return
-    # 3) 폴백: 기본 브라우저
-    import webbrowser
-    webbrowser.open(URL)
-    while http_ready():
-        time.sleep(2)
+    webview.create_window("Voice Studio", URL, width=1180, height=860, min_size=(920, 640))
+    webview.start()
 
 
 def main():
