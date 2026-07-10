@@ -15,13 +15,13 @@ ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
 from PySide6.QtCore import Qt, QThread, Signal, QObject, QUrl
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QColor
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QTabWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QPushButton, QComboBox, QTextEdit, QSlider, QLineEdit, QCheckBox,
-    QFileDialog, QListWidget, QListWidgetItem, QMessageBox, QPlainTextEdit,
-    QProgressBar, QGroupBox, QFormLayout, QSizePolicy,
+    QApplication, QMainWindow, QWidget, QStackedWidget, QScrollArea, QVBoxLayout,
+    QHBoxLayout, QLabel, QPushButton, QComboBox, QTextEdit, QSlider, QLineEdit,
+    QCheckBox, QFileDialog, QListWidget, QListWidgetItem, QMessageBox,
+    QPlainTextEdit, QProgressBar, QGroupBox, QFormLayout, QGraphicsDropShadowEffect,
 )
 
 DATA = ROOT / "data"
@@ -125,15 +125,82 @@ class MainWindow(QMainWindow):
         self.player.setAudioOutput(self.audio_out)
         self.last_file = None
 
-        tabs = QTabWidget()
-        tabs.addTab(self._tab_generate(), "음성 만들기")
-        tabs.addTab(self._tab_train(), "목소리 학습")
-        tabs.addTab(self._tab_library(), "보관함")
-        tabs.addTab(self._tab_settings(), "설정")
-        tabs.currentChanged.connect(self._on_tab)
-        self.setCentralWidget(tabs)
-        self.tabs = tabs
+        pages = [
+            (self._tab_generate(), "음성 만들기", "텍스트를 입력하면 선택한 목소리로 자연스럽게 읽어 드립니다."),
+            (self._tab_train(), "목소리 학습", "유튜브·파일의 음성으로 나만의 목소리를 만듭니다."),
+            (self._tab_library(), "보관함", "생성한 음성이 자동으로 보관됩니다."),
+            (self._tab_settings(), "설정", "모델과 실행 환경을 설정합니다."),
+        ]
+        self.stack = QStackedWidget()
+        for content, title, sub in pages:
+            self.stack.addWidget(self._wrap_panel(content, title, sub))
+
+        topbar = self._make_topbar([p[1] for p in pages])
+
+        central = QWidget(); cv = QVBoxLayout(central)
+        cv.setContentsMargins(0, 0, 0, 0); cv.setSpacing(0)
+        cv.addWidget(topbar)
+        cv.addWidget(self.stack, 1)
+        self.setCentralWidget(central)
         self.refresh_voices()
+
+    def _make_topbar(self, names):
+        bar = QWidget(); bar.setObjectName("topbar"); bar.setFixedHeight(58)
+        h = QHBoxLayout(bar); h.setContentsMargins(20, 0, 20, 0)
+        brand = QLabel("◐  Voice Studio"); brand.setObjectName("brand")
+        h.addWidget(brand)
+        h.addStretch(1)
+        self.nav_btns = []
+        navwrap = QWidget(); nh = QHBoxLayout(navwrap); nh.setContentsMargins(0, 0, 0, 0); nh.setSpacing(4)
+        for i, nm in enumerate(names):
+            b = QPushButton(nm); b.setCheckable(True); b.setObjectName("nav")
+            b.setCursor(Qt.PointingHandCursor)
+            b.clicked.connect(lambda _=False, idx=i: self._go(idx))
+            nh.addWidget(b); self.nav_btns.append(b)
+        self.nav_btns[0].setChecked(True)
+        h.addWidget(navwrap)
+        h.addStretch(1)
+        self.theme_btn = QPushButton("☀"); self.theme_btn.setObjectName("themeToggle")
+        self.theme_btn.setCursor(Qt.PointingHandCursor)
+        self.theme_btn.clicked.connect(self._toggle_theme)
+        h.addWidget(self.theme_btn)
+        return bar
+
+    def _toggle_theme(self):
+        global CURRENT_THEME
+        CURRENT_THEME = "dark" if CURRENT_THEME == "light" else "light"
+        QApplication.instance().setStyleSheet(QSS_DARK if CURRENT_THEME == "dark" else QSS_LIGHT)
+        self.theme_btn.setText("☾" if CURRENT_THEME == "dark" else "☀")
+
+    def _go(self, idx):
+        self.stack.setCurrentIndex(idx)
+        for i, b in enumerate(self.nav_btns):
+            b.setChecked(i == idx)
+        title = self.nav_btns[idx].text()
+        if title == "보관함":
+            self.refresh_library()
+        elif title == "설정":
+            self._load_logs()
+
+    def _wrap_panel(self, content, title, sub):
+        card = QWidget(); card.setObjectName("panel")
+        cl = QVBoxLayout(card); cl.setContentsMargins(30, 28, 30, 28); cl.setSpacing(14)
+        h1 = QLabel(title); h1.setObjectName("h1")
+        subl = QLabel(sub); subl.setObjectName("sub")
+        cl.addWidget(h1); cl.addWidget(subl)
+        cl.addSpacing(6)
+        cl.addWidget(content)
+        card.setMaximumWidth(760)
+        sh = QGraphicsDropShadowEffect(blurRadius=34, xOffset=0, yOffset=5)
+        sh.setColor(QColor(0, 0, 0, 30))
+        card.setGraphicsEffect(sh)
+
+        center = QWidget(); ch = QHBoxLayout(center); ch.setContentsMargins(24, 26, 24, 40)
+        ch.addStretch(1); ch.addWidget(card, 1); ch.addStretch(1)
+
+        scroll = QScrollArea(); scroll.setWidgetResizable(True); scroll.setFrameShape(QScrollArea.NoFrame)
+        scroll.setWidget(center)
+        return scroll
 
     # ---------- 음성 만들기 ----------
     def _tab_generate(self):
@@ -445,86 +512,80 @@ class MainWindow(QMainWindow):
                 self.lib_list.addItem(it)
 
 
-QSS = """
-* { font-family: "Malgun Gothic", "Segoe UI", sans-serif; font-size: 14px; color: #f5f5f7; }
-QMainWindow, QWidget { background: #161617; }
-QTabWidget::pane { border: none; background: #161617; }
-QTabBar { background: transparent; }
-QTabBar::tab {
-    background: transparent; color: #98989d; padding: 9px 20px; margin: 6px 3px;
-    border-radius: 980px; font-weight: 600;
-}
-QTabBar::tab:selected { background: #2c2c2e; color: #f5f5f7; }
-QTabBar::tab:hover:!selected { color: #f5f5f7; }
+def _qss(bg, panel, text, sub, field, field_focus, border, accent, hover, seg_active, nav_active, tt_bg):
+    return f"""
+QWidget {{ background: transparent; color: {text}; font-family: "Malgun Gothic","Segoe UI",sans-serif; font-size: 14px; }}
+QMainWindow {{ background: {bg}; }}
+QScrollArea {{ background: {bg}; border: none; }}
+QScrollArea > QWidget > QWidget {{ background: {bg}; }}
+#topbar {{ background: {panel}; border-bottom: 1px solid {border}; }}
+#brand {{ font-size: 15px; font-weight: 700; color: {text}; }}
+QPushButton#nav {{ background: transparent; color: {sub}; border: none; padding: 7px 15px; border-radius: 980px; font-weight: 600; font-size: 13px; }}
+QPushButton#nav:hover {{ color: {text}; }}
+QPushButton#nav:checked {{ background: {nav_active}; color: {text}; }}
+#themeToggle {{ background: {tt_bg}; border: 1px solid {border}; border-radius: 17px; min-width: 34px; max-width: 34px; min-height: 34px; max-height: 34px; font-size: 15px; padding: 0; }}
+#themeToggle:hover {{ background: {hover}; }}
+#panel {{ background: {panel}; border-radius: 18px; }}
+#h1 {{ font-size: 25px; font-weight: 700; color: {text}; }}
+#sub {{ font-size: 14px; color: {sub}; }}
+QLabel {{ color: {text}; }}
 
-QLabel { background: transparent; }
+QPushButton {{ background: {panel}; color: {text}; border: 1px solid {border}; border-radius: 980px; padding: 9px 20px; font-weight: 500; }}
+QPushButton:hover {{ background: {hover}; }}
+QPushButton:disabled {{ color: {sub}; }}
+QPushButton#primary {{ background: {accent}; border: none; color: #ffffff; font-weight: 600; padding: 10px 22px; }}
+QPushButton#primary:hover {{ background: #0a84ff; }}
+QPushButton#primary:disabled {{ background: #a9d0f6; color: #ffffff; }}
 
-QPushButton {
-    background: #2c2c2e; color: #f5f5f7; border: 1px solid #3a3a3c;
-    border-radius: 980px; padding: 9px 20px; font-weight: 500;
-}
-QPushButton:hover { background: #3a3a3c; }
-QPushButton:disabled { color: #6e6e73; background: #232325; }
-QPushButton#primary { background: #0071e3; border: none; color: #ffffff; font-weight: 600; }
-QPushButton#primary:hover { background: #0077ed; }
-QPushButton#primary:disabled { background: #0a3b6b; color: #9bb8d8; }
+QLineEdit, QTextEdit, QPlainTextEdit, QComboBox {{ background: {field}; border: 1px solid transparent; border-radius: 12px; padding: 11px 13px; color: {text}; selection-background-color: {accent}; selection-color: #fff; }}
+QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QComboBox:focus {{ background: {field_focus}; border: 1px solid {accent}; }}
+QComboBox::drop-down {{ border: none; width: 26px; }}
+QComboBox::down-arrow {{ image: none; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid {sub}; margin-right: 10px; }}
+QComboBox QAbstractItemView {{ background: {panel}; border: 1px solid {border}; border-radius: 10px; selection-background-color: {accent}; selection-color: #fff; padding: 4px; outline: none; }}
+QPlainTextEdit {{ font-family: "Consolas", monospace; font-size: 12px; color: {sub}; }}
 
-QLineEdit, QTextEdit, QPlainTextEdit, QComboBox {
-    background: #2c2c2e; border: 1px solid transparent; border-radius: 12px;
-    padding: 10px 13px; color: #f5f5f7; selection-background-color: #0071e3;
-}
-QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QComboBox:focus {
-    background: #3a3a3c; border: 1px solid #0071e3;
-}
-QComboBox::drop-down { border: none; width: 26px; }
-QComboBox::down-arrow { image: none; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid #98989d; margin-right: 8px; }
-QComboBox QAbstractItemView {
-    background: #2c2c2e; border: 1px solid #3a3a3c; border-radius: 10px;
-    selection-background-color: #0071e3; padding: 4px; outline: none;
-}
-QPlainTextEdit { font-family: "Consolas", monospace; font-size: 12px; color: #98989d; }
+QGroupBox {{ background: {field}; border: 1px solid {border}; border-radius: 14px; margin-top: 16px; padding: 18px 14px 12px 14px; font-weight: 600; color: {text}; }}
+QGroupBox::title {{ subcontrol-origin: margin; left: 14px; padding: 0 6px; color: {sub}; }}
 
-QGroupBox {
-    background: #1c1c1e; border: 1px solid rgba(255,255,255,0.10); border-radius: 16px;
-    margin-top: 14px; padding: 16px 14px 12px 14px; font-weight: 600;
-}
-QGroupBox::title { subcontrol-origin: margin; left: 16px; padding: 0 6px; color: #98989d; }
+QListWidget {{ background: {panel}; border: 1px solid {border}; border-radius: 12px; padding: 6px; outline: none; }}
+QListWidget::item {{ padding: 11px 12px; border-radius: 8px; color: {text}; }}
+QListWidget::item:selected {{ background: {accent}; color: #fff; }}
+QListWidget::item:hover:!selected {{ background: {hover}; }}
 
-QListWidget {
-    background: #1c1c1e; border: 1px solid rgba(255,255,255,0.10); border-radius: 12px;
-    padding: 6px; outline: none;
-}
-QListWidget::item { padding: 11px 12px; border-radius: 8px; color: #f5f5f7; }
-QListWidget::item:selected { background: #0071e3; color: #fff; }
-QListWidget::item:hover:!selected { background: #2c2c2e; }
+QSlider::groove:horizontal {{ height: 4px; background: {seg_active}; border-radius: 2px; }}
+QSlider::sub-page:horizontal {{ background: {accent}; border-radius: 2px; }}
+QSlider::handle:horizontal {{ background: #ffffff; border: 1px solid {border}; width: 18px; height: 18px; margin: -8px 0; border-radius: 9px; }}
 
-QSlider::groove:horizontal { height: 4px; background: #3a3a3c; border-radius: 2px; }
-QSlider::sub-page:horizontal { background: #0071e3; border-radius: 2px; }
-QSlider::handle:horizontal {
-    background: #ffffff; width: 18px; height: 18px; margin: -7px 0; border-radius: 9px;
-}
+QProgressBar {{ background: {seg_active}; border: none; border-radius: 3px; height: 6px; }}
+QProgressBar::chunk {{ background: {accent}; border-radius: 3px; }}
 
-QProgressBar { background: #2c2c2e; border: none; border-radius: 3px; height: 6px; }
-QProgressBar::chunk { background: #0071e3; border-radius: 3px; }
+QCheckBox {{ spacing: 9px; color: {text}; }}
+QCheckBox::indicator {{ width: 18px; height: 18px; border-radius: 5px; border: 1px solid {sub}; background: {field}; }}
+QCheckBox::indicator:checked {{ background: {accent}; border: 1px solid {accent}; }}
 
-QCheckBox { spacing: 9px; background: transparent; }
-QCheckBox::indicator { width: 18px; height: 18px; border-radius: 5px; border: 1px solid #48484a; background: #2c2c2e; }
-QCheckBox::indicator:checked { background: #0071e3; border: 1px solid #0071e3; }
-
-QScrollBar:vertical { background: transparent; width: 10px; margin: 2px; }
-QScrollBar::handle:vertical { background: #3a3a3c; border-radius: 5px; min-height: 30px; }
-QScrollBar::handle:vertical:hover { background: #48484a; }
-QScrollBar::add-line, QScrollBar::sub-line { height: 0; }
-QScrollBar::add-page, QScrollBar::sub-page { background: transparent; }
-QMessageBox { background: #1c1c1e; }
+QScrollBar:vertical {{ background: transparent; width: 10px; margin: 2px; }}
+QScrollBar::handle:vertical {{ background: {seg_active}; border-radius: 5px; min-height: 30px; }}
+QScrollBar::add-line, QScrollBar::sub-line {{ height: 0; }}
+QScrollBar::add-page, QScrollBar::sub-page {{ background: transparent; }}
 """
+
+
+QSS_LIGHT = _qss(bg="#f5f5f7", panel="#ffffff", text="#1d1d1f", sub="#6e6e73",
+                 field="#f0f0f2", field_focus="#ffffff", border="rgba(0,0,0,0.10)",
+                 accent="#0071e3", hover="#f2f2f4", seg_active="#e0e0e5",
+                 nav_active="#e8e8ed", tt_bg="#ffffff")
+QSS_DARK = _qss(bg="#000000", panel="#1c1c1e", text="#f5f5f7", sub="#98989d",
+                field="#2c2c2e", field_focus="#3a3a3c", border="rgba(255,255,255,0.12)",
+                accent="#0071e3", hover="#3a3a3c", seg_active="#3a3a3c",
+                nav_active="#2c2c2e", tt_bg="#1c1c1e")
+CURRENT_THEME = "light"
 
 
 def main():
     app = QApplication(sys.argv)
     app.setApplicationName("Voice Studio")
     app.setStyle("Fusion")
-    app.setStyleSheet(QSS)
+    app.setStyleSheet(QSS_LIGHT)
     win = MainWindow()
     win.show()
     sys.exit(app.exec())
