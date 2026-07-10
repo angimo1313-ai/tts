@@ -67,6 +67,10 @@ def main():
     opt_dir = f"logs/{exp_name}"
     os.makedirs(opt_dir, exist_ok=True)
     Path("TEMP").mkdir(exist_ok=True)
+    # 최종 가중치 저장 폴더 — s2/s1 은 my_save(shutil.move) 로 저장하므로
+    # 이 폴더들이 없으면 마지막에 FileNotFoundError 로 실패한다.
+    os.makedirs("SoVITS_weights_v2", exist_ok=True)
+    os.makedirs("GPT_weights_v2", exist_ok=True)
 
     # 리스트 파일 BOM 제거 — BOM 이 붙으면 첫 줄 wav 파일명 앞에 U+FEFF 가 끼어
     # ffmpeg 가 "Illegal byte sequence" 로 파일을 못 여는 문제를 방지한다.
