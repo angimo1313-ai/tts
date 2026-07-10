@@ -157,15 +157,49 @@ def main():
     run(["GPT_SoVITS/s1_train.py", "--config_file", "TEMP/tmp_s1.yaml"])
     ev(step="train_s1", state="done")
 
-    # ---- 결과 가중치 수집 ----
-    sv = sorted(glob.glob(f"SoVITS_weights_v2/{exp_name}_e*.pth"), key=os.path.getmtime)
-    gp = sorted(glob.glob(f"GPT_weights_v2/{exp_name}-e*.ckpt"), key=os.path.getmtime)
+    # ---- s1 가중치 보정 ----
+    # 저장 훅(on_train_epoch_end)은 학습 epoch 가 실제로 돌 때만 뜬다. 이미 max epoch
+    # 까지 학습된 체크포인트에서 resume 하면 훅이 안 떠 GPT 가중치가 저장되지 않으므로,
+    # 학습 체크포인트에서 추론용 가중치를 직접 추출한다(콜백 저장 포맷 그대로).
+    if not glob.glob(f"GPT_weights_v2/{exp_name}-e*.ckpt"):
+        _extract_gpt_weight(exp_name, opt_dir, s1, epochs_s1)
+
+    # ---- 결과 가중치 수집 (exp_name 우선, 없으면 폴더 최신으로 폴백) ----
+    sv = sorted(glob.glob(f"SoVITS_weights_v2/{exp_name}_e*.pth") or
+                glob.glob("SoVITS_weights_v2/*.pth"), key=os.path.getmtime)
+    gp = sorted(glob.glob(f"GPT_weights_v2/{exp_name}-e*.ckpt") or
+                glob.glob("GPT_weights_v2/*.ckpt"), key=os.path.getmtime)
     result = {
         "sovits": str((SOVITS_DIR / sv[-1]).resolve()) if sv else "",
         "gpt": str((SOVITS_DIR / gp[-1]).resolve()) if gp else "",
     }
     ev(step="done", msg="파인튜닝 완료", result=result)
     print("RESULT " + json.dumps(result, ensure_ascii=False), flush=True)
+
+
+def _extract_gpt_weight(exp_name, opt_dir, s1_config, epochs_s1):
+    """학습 체크포인트(logs_s1_v2/ckpt)에서 추론용 GPT 가중치(.ckpt)를 추출.
+
+    s1_train.py 의 on_train_epoch_end 저장 포맷을 그대로 재현한다:
+      {"weight": state_dict(.half()), "config": s1_config, "info": "GPT-e{epoch}"}
+    """
+    import torch
+    ckpts = glob.glob(f"{opt_dir}/logs_s1_v2/ckpt/*.ckpt")
+    if not ckpts:
+        return
+    latest = sorted(ckpts, key=os.path.getmtime)[-1]
+    ck = torch.load(latest, map_location="cpu", weights_only=False)
+    sd = ck.get("state_dict", ck)
+    epoch = int(ck.get("epoch", epochs_s1 - 1)) + 1
+    to_save = {
+        "weight": {k: v.half() for k, v in sd.items()},
+        "config": s1_config,
+        "info": f"GPT-e{epoch}",
+    }
+    os.makedirs("GPT_weights_v2", exist_ok=True)
+    out = f"GPT_weights_v2/{exp_name}-e{epoch}.ckpt"
+    torch.save(to_save, out)
+    ev(step="train_s1", state="extracted", msg=f"체크포인트에서 GPT 가중치 추출 완료 (e{epoch})")
 
 
 def _merge(opt_dir, part_name, out_name):
