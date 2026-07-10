@@ -21,6 +21,7 @@ FILES = [
     "chinese-roberta-wwm-ext-large/pytorch_model.bin",
     "gsv-v2final-pretrained/s1bert25hz-5kh-longer-epoch=12-step=369668.ckpt",
     "gsv-v2final-pretrained/s2G2333k.pth",
+    "gsv-v2final-pretrained/s2D2333k.pth",  # 파인튜닝(학습) 초기화용 discriminator
 ]
 
 

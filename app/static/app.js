@@ -46,6 +46,7 @@ function switchView(name) {
   $$(".tab").forEach((t) => t.classList.toggle("active", t.dataset.view === name));
   $$(".view").forEach((v) => v.classList.toggle("active", v.id === `view-${name}`));
   if (name === "library") loadLibrary();
+  if (name === "train") loadFinetuneVoices();
 }
 $$("#tabs .tab").forEach((t) => t.addEventListener("click", () => switchView(t.dataset.view)));
 document.addEventListener("click", (e) => {
@@ -392,6 +393,79 @@ async function loadLibrary() {
   }
 }
 
+// ---------- Fine-tuning (정밀 학습) ----------
+let FT_VOICE = null;
+async function loadFinetuneVoices() {
+  const list = $("#ftVoiceList");
+  if (!list) return;
+  try {
+    const voices = await (await api("/api/voices")).json();
+    if (!voices.length) {
+      list.innerHTML = '<div class="empty-hint">학습된 목소리가 없습니다.</div>';
+      $("#finetuneBtn").disabled = true;
+      return;
+    }
+    list.innerHTML = "";
+    for (const v of voices) {
+      let info = { clips: 0, mode: "zero-shot" };
+      try { info = await (await api("/api/dataset-info?voice=" + encodeURIComponent(v.id))).json(); } catch (e) {}
+      const chip = document.createElement("div");
+      chip.className = "voice-chip";
+      chip.innerHTML = `<span>${esc(v.name)}</span> <small style="opacity:.6">${info.clips}클립·${info.mode === "finetuned" ? "학습됨" : "제로샷"}</small>`;
+      chip.addEventListener("click", () => {
+        $$("#ftVoiceList .voice-chip").forEach((c) => c.classList.remove("selected"));
+        chip.classList.add("selected");
+        FT_VOICE = v.id;
+        $("#finetuneBtn").disabled = false;
+        $("#ftStatus").textContent = info.clips < 3 ? "클립이 적어요. 음성을 더 추가하면 좋습니다." : "";
+      });
+      list.appendChild(chip);
+    }
+  } catch (e) {}
+}
+function markFtStep(step) {
+  const el = document.querySelector(`#ftSteps .step[data-step="${step}"]`);
+  if (!el) return;
+  $$("#ftSteps .step").forEach((s) => { if (s.classList.contains("active")) s.classList.add("done"); s.classList.remove("active"); });
+  el.classList.add("active");
+}
+const _ftBtn = $("#finetuneBtn");
+if (_ftBtn) _ftBtn.addEventListener("click", async () => {
+  if (!FT_VOICE) return;
+  if (!confirm("파인튜닝을 시작할까요? GPU로 수십 분 걸릴 수 있어요.")) return;
+  const btn = $("#finetuneBtn"), log = $("#ftLog");
+  btn.disabled = true; $("#ftStatus").textContent = "학습 중… (창을 닫지 마세요)";
+  log.classList.remove("hidden"); log.textContent = "";
+  $$("#ftSteps .step").forEach((s) => s.classList.remove("active", "done"));
+  try {
+    const res = await fetch("/api/finetune", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ voice: FT_VOICE }),
+    });
+    const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = "";
+    let failed = false;
+    while (true) {
+      const { value, done } = await reader.read(); if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split("\n"); buf = lines.pop();
+      for (const ln of lines) {
+        if (!ln.trim()) continue;
+        const ev = JSON.parse(ln);
+        if (ev.step && ev.step !== "error" && ev.step !== "registered") markFtStep(ev.step);
+        if (ev.msg) { log.textContent += ev.msg + "\n"; log.scrollTop = log.scrollHeight; }
+        if (ev.step === "error") { failed = true; $("#ftStatus").textContent = "실패: " + ev.msg; }
+      }
+    }
+    if (!failed) { $("#ftStatus").textContent = "완료! 이제 이 목소리는 학습된 가중치를 씁니다."; $$("#ftSteps .step").forEach((s) => s.classList.add("done")); }
+    loadVoices(); loadFinetuneVoices();
+  } catch (e) {
+    $("#ftStatus").textContent = "실패: " + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 // ---------- init ----------
 loadVoices();
 loadDeviceInfo();
+loadFinetuneVoices();

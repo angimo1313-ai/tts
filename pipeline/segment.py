@@ -71,11 +71,13 @@ def build_dataset(vocals: Path, dataset_dir: Path, device: str = "cuda") -> int:
         else:
             raise
 
+    # 누적: 기존 클립이 있으면 이어서 번호 매기고 metadata 에 append
+    existing = len(list(clips_dir.glob("*.wav")))
     meta_lines = []
     idx = 0
     for seg in segments:
         if idx >= MAX_CLIPS:
-            break  # 참조용으로 충분 — 조기 종료
+            break  # 이번 세션 참조/추가용으로 충분 — 조기 종료
         dur = seg.end - seg.start
         text = (seg.text or "").strip()
         if not text or dur < MIN_SEC or dur > MAX_SEC:
@@ -86,16 +88,20 @@ def build_dataset(vocals: Path, dataset_dir: Path, device: str = "cuda") -> int:
         if len(clip) < int(MIN_SEC * TARGET_SR):
             continue
         idx += 1
-        fname = f"{idx:04d}.wav"
+        fname = f"{existing + idx:04d}.wav"
         sf.write(clips_dir / fname, clip, TARGET_SR)
         # metadata.csv format: wavs/0001.wav|텍스트
         meta_lines.append(f"wavs/{fname}|{text}")
 
-    (dataset_dir / "metadata.csv").write_text("\n".join(meta_lines), encoding="utf-8")
+    meta_file = dataset_dir / "metadata.csv"
+    prev = meta_file.read_text(encoding="utf-8").rstrip("\n") if meta_file.exists() else ""
+    combined = ([prev] if prev else []) + meta_lines
+    meta_file.write_text("\n".join(combined) + "\n", encoding="utf-8")
 
-    if idx == 0:
+    total = existing + idx
+    if total == 0:
         raise RuntimeError("사용 가능한 음성 구간을 찾지 못했습니다. 더 또렷한 단일 화자 영상을 사용해 주세요.")
-    return idx
+    return total
 
 
 def _cuda_ok() -> bool:

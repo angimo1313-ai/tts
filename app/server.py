@@ -283,6 +283,58 @@ async def train_upload(
     return StreamingResponse(stream(), media_type="application/x-ndjson")
 
 
+# ================= Fine-tuning (누적 정밀 학습) =================
+class FinetuneReq(BaseModel):
+    voice: str
+    epochs_s2: int = 8
+    epochs_s1: int = 15
+    batch_size: int = 4
+
+
+@app.post("/api/finetune")
+def finetune(req: FinetuneReq):
+    vid = Path(req.voice).name
+    vdir = VOICES_DIR / vid
+    dataset_dir = DATA / "datasets" / vid
+    if not vdir.exists():
+        raise HTTPException(404, "목소리를 찾을 수 없습니다.")
+    if not (dataset_dir / "metadata.csv").exists():
+        raise HTTPException(400, "학습 데이터가 없습니다. 먼저 음성을 추가하세요.")
+    try:
+        from pipeline import engine_sovits
+    except Exception as e:
+        raise HTTPException(503, f"GPT-SoVITS 환경을 불러올 수 없습니다. ({e})")
+
+    def stream():
+        try:
+            for event in engine_sovits.finetune(
+                vid, vid, dataset_dir, vdir,
+                epochs_s2=req.epochs_s2, epochs_s1=req.epochs_s1, batch_size=req.batch_size,
+            ):
+                yield json.dumps(event, ensure_ascii=False) + "\n"
+        except Exception as e:
+            yield json.dumps({"step": "error", "msg": str(e)}, ensure_ascii=False) + "\n"
+
+    return StreamingResponse(stream(), media_type="application/x-ndjson")
+
+
+@app.get("/api/dataset-info")
+def dataset_info(voice: str):
+    vid = Path(voice).name
+    meta = DATA / "datasets" / vid / "metadata.csv"
+    n = 0
+    if meta.exists():
+        n = len([l for l in meta.read_text(encoding="utf-8").splitlines() if "|" in l])
+    vf = VOICES_DIR / vid / "voice.json"
+    mode = "zero-shot"
+    if vf.exists():
+        try:
+            mode = json.loads(vf.read_text(encoding="utf-8")).get("mode", "zero-shot")
+        except Exception:
+            pass
+    return {"clips": n, "mode": mode}
+
+
 # ================= Update (GitHub API, git 불필요) =================
 class TokenReq(BaseModel):
     token: str

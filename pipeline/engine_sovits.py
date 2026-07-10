@@ -39,6 +39,26 @@ def _log_tail(n: int = 1800) -> str:
         return "(로그 파일 없음)"
 
 
+# v2 base 가중치(api_v2 cwd=GPT-SoVITS 기준 경로)
+_BASE_GPT = "GPT_SoVITS/pretrained_models/gsv-v2final-pretrained/s1bert25hz-5kh-longer-epoch=12-step=369668.ckpt"
+_BASE_SOVITS = "GPT_SoVITS/pretrained_models/gsv-v2final-pretrained/s2G2333k.pth"
+_loaded = {"gpt": None, "sovits": None}
+
+
+def _set_weights(gpt: str, sovits: str):
+    """파인튜닝/기본 가중치로 전환 (바뀐 것만)."""
+    import urllib.parse
+    for kind, path in (("gpt", gpt), ("sovits", sovits)):
+        if path and path != _loaded.get(kind):
+            url = (f"http://127.0.0.1:{PORT}/set_{kind}_weights?weights_path="
+                   + urllib.parse.quote(path))
+            try:
+                urllib.request.urlopen(url, timeout=180).read()
+                _loaded[kind] = path
+            except Exception as e:
+                raise RuntimeError(f"가중치 로드 실패({kind}): {e}")
+
+
 # ---------------- config yaml ----------------
 def _write_config() -> Path:
     """Write a tts_infer yaml pointing at v2 models with our device/is_half."""
@@ -174,6 +194,18 @@ def generate(text: str, voice_dir: Path, device: str, speed: float, out_path: Pa
 
     _start_server()
 
+    # 파인튜닝된 목소리면 전용 가중치로 전환, 아니면 base 로 되돌림
+    meta_f = voice_dir / "voice.json"
+    gpt_w = sovits_w = ""
+    if meta_f.exists():
+        try:
+            m = json.loads(meta_f.read_text(encoding="utf-8"))
+            gpt_w = m.get("gpt_weights", "")
+            sovits_w = m.get("sovits_weights", "")
+        except Exception:
+            pass
+    _set_weights(gpt_w or _BASE_GPT, sovits_w or _BASE_SOVITS)
+
     payload = {
         "text": text,
         "text_lang": "ko",
@@ -206,3 +238,72 @@ def generate(text: str, voice_dir: Path, device: str, speed: float, out_path: Pa
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_bytes(audio)
     return out_path
+
+
+# ---------------- fine-tuning (누적 학습) ----------------
+_WORKER = ROOT / "engines" / "finetune_worker.py"
+
+
+def finetune(voice_id: str, name: str, dataset_dir: Path, out_dir: Path,
+             epochs_s2: int = 8, epochs_s1: int = 15, batch_size: int = 4):
+    """누적된 데이터셋으로 GPT-SoVITS v2 파인튜닝. 진행 이벤트를 yield."""
+    meta = dataset_dir / "metadata.csv"
+    if not meta.exists():
+        raise RuntimeError("학습 데이터가 없습니다. 먼저 음성을 추가(학습)하세요.")
+    lines = [l for l in meta.read_text(encoding="utf-8").splitlines() if "|" in l]
+    if len(lines) < 3:
+        raise RuntimeError("학습 데이터가 너무 적습니다. 음성을 더 추가한 뒤 파인튜닝하세요.")
+
+    wav_dir = (dataset_dir / "wavs").resolve()
+    out_lines = [f"{Path(rel).name}|{voice_id}|ko|{text.strip()}"
+                 for rel, text in (l.split('|', 1) for l in lines)]
+    list_path = (dataset_dir / "train_list.txt").resolve()
+    list_path.write_text("\n".join(out_lines) + "\n", encoding="utf-8")
+
+    try:
+        import torch
+        has_cuda = torch.cuda.is_available()
+    except Exception:
+        has_cuda = False
+    is_half = bool(_CFG.get("is_half", True)) and has_cuda and _CFG.get("device", "auto") != "cpu"
+
+    args = {"exp_name": voice_id, "list_path": str(list_path), "wav_dir": str(wav_dir),
+            "epochs_s2": epochs_s2, "epochs_s1": epochs_s1, "batch_size": batch_size, "is_half": is_half}
+    if not SOVITS_PY.exists():
+        raise RuntimeError("GPT-SoVITS 환경(.venv-sovits)이 없습니다.")
+
+    env = dict(os.environ, PYTHONUTF8="1")
+    CREATE_NO_WINDOW = 0x08000000
+    proc = subprocess.Popen(
+        [str(SOVITS_PY), str(_WORKER), json.dumps(args, ensure_ascii=False)],
+        cwd=str(ROOT / "engines"), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        text=True, encoding="utf-8", errors="ignore", env=env, creationflags=CREATE_NO_WINDOW)
+
+    result = {}
+    for line in proc.stdout:
+        line = line.rstrip("\n")
+        if line.startswith("EVENT "):
+            try:
+                yield json.loads(line[6:])
+            except Exception:
+                pass
+        elif line.startswith("RESULT "):
+            try:
+                result = json.loads(line[7:])
+            except Exception:
+                pass
+    proc.wait()
+    if proc.returncode != 0 or not result.get("sovits") or not result.get("gpt"):
+        raise RuntimeError("파인튜닝 실패. GPU 메모리/로그를 확인하세요.")
+
+    # voice.json 에 파인튜닝 가중치 등록
+    vf = out_dir / "voice.json"
+    try:
+        m = json.loads(vf.read_text(encoding="utf-8")) if vf.exists() else {}
+    except Exception:
+        m = {}
+    m.update({"gpt_weights": result["gpt"], "sovits_weights": result["sovits"],
+              "mode": "finetuned"})
+    vf.write_text(json.dumps(m, ensure_ascii=False, indent=2), encoding="utf-8")
+    yield {"step": "registered", "msg": "파인튜닝 완료 — 이제 이 목소리는 학습된 가중치를 씁니다.",
+           "result": result}

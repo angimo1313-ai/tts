@@ -158,6 +158,26 @@
 
         <div class="log hidden" id="trainLog"></div>
 
+        <div class="ft-section">
+          <label class="ft-title">정밀 학습 (파인튜닝) — 재현도 향상</label>
+          <div class="hint">같은 목소리에 음성을 여러 번 추가한 뒤 파인튜닝하면 훨씬 또렷하고 닮게 됩니다. (GPU 필요, 데이터양에 따라 수십 분)</div>
+          <div id="ftVoiceList" class="voice-picker" style="margin-top:12px;">
+            <div class="empty-hint">학습된 목소리가 없습니다.</div>
+          </div>
+          <div class="row" style="align-items:center; gap:10px; margin-top:12px;">
+            <button class="btn primary" id="finetuneBtn" disabled>파인튜닝 시작</button>
+            <span class="hint" id="ftStatus" style="margin:0;"></span>
+          </div>
+          <div class="steps" id="ftSteps" style="margin-top:14px;">
+            <div class="step" data-step="text"><span class="dot"></span>텍스트</div>
+            <div class="step" data-step="hubert"><span class="dot"></span>음성특징</div>
+            <div class="step" data-step="semantic"><span class="dot"></span>시맨틱</div>
+            <div class="step" data-step="train_s2"><span class="dot"></span>SoVITS</div>
+            <div class="step" data-step="train_s1"><span class="dot"></span>GPT</div>
+          </div>
+          <div class="log hidden" id="ftLog"></div>
+        </div>
+
         <div class="consent-note">
           ⚠︎ 실존 인물의 목소리 복제는 개인 학습·연구 용도로만 사용하세요. 공개·상업적 사용은 당사자 동의가 필요할 수 있습니다.
         </div>
