@@ -305,9 +305,37 @@ def save_github_token(req: TokenReq):
 def do_update():
     from app import updater
     try:
-        return updater.check_and_update()
+        result = updater.check_and_update()
     except Exception as e:
         raise HTTPException(500, f"업데이트 실패: {e}")
+    if result.get("updated"):
+        _schedule_restart()
+        result["message"] = "새 버전을 적용했습니다. 잠시 후 앱이 자동으로 재시작됩니다."
+    return result
+
+
+@app.post("/api/restart")
+def restart_app():
+    _schedule_restart()
+    return {"ok": True}
+
+
+def _schedule_restart():
+    """분리된 프로세스로 앱을 껐다 켠다(자동 재시작). 응답이 나간 뒤 실행되도록 지연."""
+    import subprocess
+    pyw = ROOT / ".venv" / "Scripts" / "pythonw.exe"
+    launcher = ROOT / "launcher.pyw"
+    if not pyw.exists():
+        return
+    ps = (
+        "Start-Sleep -Seconds 2; "
+        "Get-Process pythonw,python -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; "
+        "Start-Sleep -Seconds 1; "
+        f"Start-Process '{pyw}' -ArgumentList 'launcher.pyw' -WorkingDirectory '{ROOT}'"
+    )
+    DETACHED = 0x00000008
+    subprocess.Popen(["powershell", "-NoProfile", "-WindowStyle", "Hidden", "-Command", ps],
+                     creationflags=DETACHED)
 
 
 # ================= Static / outputs =================

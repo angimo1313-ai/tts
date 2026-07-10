@@ -63,7 +63,7 @@ function bindSegmented(containerSel, onChange) {
     })
   );
 }
-let ENGINE = "f5";
+let ENGINE = "sovits";
 let DEVICE = "cuda";
 bindSegmented("#engineSeg", (d) => (ENGINE = d.engine));
 bindSegmented("#deviceSeg", (d) => (DEVICE = d.device));
