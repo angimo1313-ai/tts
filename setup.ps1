@@ -91,7 +91,20 @@ if ($SoVITS) {
   New-Item -ItemType Directory -Force (Join-Path $Root "engines") | Out-Null
   $sov = Join-Path $Root "engines\GPT-SoVITS"
   if (-not (Test-Path $sov)) {
-    git clone --depth 1 https://github.com/RVC-Boss/GPT-SoVITS.git $sov
+    if (Get-Command git -ErrorAction SilentlyContinue) {
+      git clone --depth 1 https://github.com/RVC-Boss/GPT-SoVITS.git $sov
+    } else {
+      # git 이 없는 PC 대비 — zip 으로 내려받아 배치
+      Ok "git 없음 — GPT-SoVITS zip 다운로드"
+      $zip = Join-Path $env:TEMP "gptsovits.zip"
+      Invoke-WebRequest "https://codeload.github.com/RVC-Boss/GPT-SoVITS/zip/refs/heads/main" -OutFile $zip
+      $ex = Join-Path $env:TEMP "gptsovits_ex"
+      if (Test-Path $ex) { Remove-Item $ex -Recurse -Force }
+      Expand-Archive $zip $ex -Force
+      $inner = Get-ChildItem $ex -Directory | Select-Object -First 1
+      Move-Item $inner.FullName $sov
+      Remove-Item $zip -Force
+    }
   }
   Ok "레포 준비 완료"
 
