@@ -12,6 +12,7 @@ import socket
 import subprocess
 import sys
 import time
+import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -24,6 +25,15 @@ def port_open() -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.settimeout(0.4)
         return s.connect_ex(("127.0.0.1", PORT)) == 0
+
+
+def http_ready() -> bool:
+    # 서버가 실제로 HTTP 응답을 줄 때만 True (창이 일찍 열려 '연결 거부' 뜨는 것 방지)
+    try:
+        with urllib.request.urlopen(URL + "/api/system", timeout=1) as r:
+            return r.status == 200
+    except Exception:
+        return False
 
 
 def _msgbox(text: str):
@@ -41,19 +51,20 @@ def main():
         return
 
     server = None
-    if not port_open():
+    if not http_ready():
         env = dict(os.environ, PYTHONUTF8="1")
         server = subprocess.Popen(
             [str(py), "-m", "uvicorn", "app.server:app", "--host", "127.0.0.1", "--port", str(PORT)],
             cwd=str(ROOT), creationflags=CREATE_NO_WINDOW, env=env,
         )
-        for _ in range(120):  # 최대 60초 대기
-            if port_open():
-                break
-            if server.poll() is not None:
-                _msgbox("서버 시작에 실패했습니다.")
-                return
-            time.sleep(0.5)
+    # 서버가 실제 HTTP 응답을 줄 때까지 대기 (최대 60초) — 준비 후에만 창을 연다
+    for _ in range(120):
+        if http_ready():
+            break
+        if server is not None and server.poll() is not None:
+            _msgbox("서버 시작에 실패했습니다.")
+            return
+        time.sleep(0.5)
 
     try:
         # 네이티브 창 (Windows: Edge WebView2)
