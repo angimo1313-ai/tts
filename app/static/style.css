@@ -260,6 +260,12 @@ input[type="range"]::-webkit-slider-thumb {
   font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
   font-size: 12.5px; color: var(--text-sub);
   max-height: 240px; overflow-y: auto; white-space: pre-wrap;
+  /* pywebview(WebView2) 창에서도 마우스로 로그를 선택·복사할 수 있게 */
+  -webkit-user-select: text; user-select: text; cursor: text;
+}
+/* 로그·결과·입력 등 텍스트는 어디서든 선택/복사 허용 (앱 창 기본값 무시) */
+.log, .log *, pre, code, .result, .lib-name, .lib-text, input, textarea {
+  -webkit-user-select: text; user-select: text;
 }
 .result { margin-top: 22px; display: flex; align-items: center; gap: 14px; }
 .result audio { flex: 1; height: 40px; }

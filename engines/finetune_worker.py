@@ -102,6 +102,9 @@ def main():
 
     # ---- 4) s2 train (SoVITS) ----
     ev(step="train_s2", state="start", msg="[4/5] SoVITS(음색) 학습")
+    # 체크포인트 저장 폴더 미리 생성 — s2_train 은 shutil.move 로 저장하므로
+    # 이 폴더가 없으면 FileNotFoundError 로 실패한다(webui.py 와 동일 처리).
+    os.makedirs(f"{opt_dir}/logs_s2_v2", exist_ok=True)
     s2 = json.loads(Path(S2CONFIG).read_text(encoding="utf-8"))
     b2 = batch
     if not is_half:
@@ -124,6 +127,7 @@ def main():
 
     # ---- 5) s1 train (GPT) ----
     ev(step="train_s1", state="start", msg="[5/5] GPT(운율) 학습")
+    os.makedirs(f"{opt_dir}/logs_s1_v2", exist_ok=True)
     import yaml
     s1 = yaml.safe_load(Path("GPT_SoVITS/configs/s1longer-v2.yaml").read_text(encoding="utf-8"))
     b1 = batch
