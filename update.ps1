@@ -1,4 +1,4 @@
-<#  Voice Studio 업데이트 — GitHub 비공개 저장소에서 최신 코드를 받아 적용.
+﻿<#  Voice Studio 업데이트 — GitHub 비공개 저장소에서 최신 코드를 받아 적용.
     사용: .\update.ps1   (또는 앱 설정 탭의 '업데이트 확인' 버튼)  #>
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot

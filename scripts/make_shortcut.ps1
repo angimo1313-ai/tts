@@ -1,4 +1,4 @@
-<#  Voice Studio 바로가기 생성 — 바탕화면 + 시작 메뉴.
+﻿<#  Voice Studio 바로가기 생성 — 바탕화면 + 시작 메뉴.
     pythonw.exe 로 launcher.pyw 를 실행(콘솔 없음), 아이콘 적용.  #>
 $ErrorActionPreference = "Stop"
 $Root = Split-Path $PSScriptRoot -Parent

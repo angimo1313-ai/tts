@@ -1,4 +1,4 @@
-<#  Voice Studio 실행 — 브라우저에서 GUI 를 엽니다.  #>
+﻿<#  Voice Studio 실행 — 브라우저에서 GUI 를 엽니다.  #>
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 
