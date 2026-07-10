@@ -1,11 +1,11 @@
-"""Voice Studio 데스크톱 런처 — 독립 프로그램 창으로 실행.
+"""Voice Studio 데스크톱 런처 — Chrome 앱 모드(프레임 없는 앱 창)로 실행.
 
 .venv 의 pythonw.exe 로 실행되면 콘솔 없이:
   1) 로컬 서버(uvicorn)를 백그라운드로 기동
-  2) 준비되면 네이티브 창(pywebview)으로 앱을 염 (브라우저 아님)
+  2) HTTP 준비되면 Chrome(없으면 Edge) 앱 모드로 앱 창을 염 — 주소창/탭 없는 앱 창
   3) 창을 닫으면 서버도 함께 종료
 
-pywebview 가 없거나 실패하면 기본 브라우저로 폴백.
+Chrome/Edge 가 없으면 pywebview(WebView2) → 기본 브라우저 순으로 폴백.
 """
 import os
 import socket
@@ -21,14 +21,7 @@ URL = f"http://127.0.0.1:{PORT}"
 CREATE_NO_WINDOW = 0x08000000
 
 
-def port_open() -> bool:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.settimeout(0.4)
-        return s.connect_ex(("127.0.0.1", PORT)) == 0
-
-
 def http_ready() -> bool:
-    # 서버가 실제로 HTTP 응답을 줄 때만 True (창이 일찍 열려 '연결 거부' 뜨는 것 방지)
     try:
         with urllib.request.urlopen(URL + "/api/system", timeout=1) as r:
             return r.status == 200
@@ -44,6 +37,49 @@ def _msgbox(text: str):
         pass
 
 
+def _find_browser():
+    cands = [
+        r"%ProgramFiles%\Google\Chrome\Application\chrome.exe",
+        r"%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe",
+        r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe",
+        r"%ProgramFiles%\Microsoft\Edge\Application\msedge.exe",
+        r"%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe",
+    ]
+    for c in cands:
+        p = os.path.expandvars(c)
+        if os.path.exists(p):
+            return p
+    return None
+
+
+def _open_window():
+    """앱 창을 열고, 창이 닫힐 때까지 블록."""
+    browser = _find_browser()
+    if browser:
+        # 전용 프로필로 독립 인스턴스를 띄워 창 종료를 정확히 감지(서버 정리용)
+        prof = ROOT / ".appprofile"
+        proc = subprocess.Popen([
+            browser, f"--app={URL}", f"--user-data-dir={prof}",
+            "--no-first-run", "--no-default-browser-check",
+            "--window-size=1180,860",
+        ])
+        proc.wait()
+        return
+    # 폴백 1: pywebview (WebView2)
+    try:
+        import webview
+        webview.create_window("Voice Studio", URL, width=1180, height=860, min_size=(900, 640))
+        webview.start()
+        return
+    except Exception:
+        pass
+    # 폴백 2: 기본 브라우저
+    import webbrowser
+    webbrowser.open(URL)
+    while http_ready():
+        time.sleep(2)
+
+
 def main():
     py = ROOT / ".venv" / "Scripts" / "python.exe"
     if not py.exists():
@@ -57,7 +93,7 @@ def main():
             [str(py), "-m", "uvicorn", "app.server:app", "--host", "127.0.0.1", "--port", str(PORT)],
             cwd=str(ROOT), creationflags=CREATE_NO_WINDOW, env=env,
         )
-    # 서버가 실제 HTTP 응답을 줄 때까지 대기 (최대 60초) — 준비 후에만 창을 연다
+    # 서버가 실제 HTTP 응답을 줄 때까지 대기(최대 60초) — 준비 후에만 창을 연다
     for _ in range(120):
         if http_ready():
             break
@@ -67,20 +103,7 @@ def main():
         time.sleep(0.5)
 
     try:
-        # 네이티브 창 (Windows: Edge WebView2)
-        import webview
-        webview.create_window("Voice Studio", URL, width=1160, height=840,
-                              min_size=(900, 640))
-        webview.start()  # 창이 닫힐 때까지 블록
-    except Exception:
-        # 폴백: 기본 브라우저
-        import webbrowser
-        webbrowser.open(URL)
-        try:
-            while port_open():
-                time.sleep(2)
-        except KeyboardInterrupt:
-            pass
+        _open_window()
     finally:
         if server is not None and server.poll() is None:
             server.terminate()

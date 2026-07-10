@@ -186,14 +186,12 @@
         </div>
 
         <div class="field">
-          <label>업데이트 (GitHub 연동)</label>
-          <input type="password" id="ghToken" placeholder="GitHub 개인 액세스 토큰 (최초 1회만)" autocomplete="off" />
-          <div class="row" style="align-items:center; gap:10px; margin-top:8px;">
-            <button class="btn ghost" id="saveTokenBtn">토큰 저장</button>
+          <label>업데이트 (GitHub)</label>
+          <div class="row" style="align-items:center; gap:10px;">
             <button class="btn primary" id="updateBtn">업데이트 확인 및 적용</button>
             <span class="hint" id="updateStatus" style="margin:0;"></span>
           </div>
-          <div class="hint">비공개 저장소라 토큰이 한 번 필요합니다. GitHub → Settings → Developer settings → Personal access tokens 에서 이 저장소 읽기(repo/contents) 권한 토큰을 만들어 넣으면, 이후엔 버튼만 누르면 업데이트됩니다. (git 설치 불필요)</div>
+          <div class="hint">비공개 저장소라 토큰이 필요합니다. 앱 폴더의 <b>github_token.txt</b> 파일에 GitHub 토큰(저장소 읽기 권한)을 한 줄로 넣은 뒤 이 버튼을 누르면 최신 코드로 업데이트됩니다. (git 설치 불필요)</div>
         </div>
 
         <div class="about">Voice Studio · 로컬 실행 · 오픈소스 TTS</div>

@@ -15,7 +15,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
-TOKEN_FILE = DATA / ".github_token"
+# 토큰은 앱 폴더의 github_token.txt 에 직접 넣어도 되고(권장), 설정에서 저장해도 된다.
+TOKEN_FILE = ROOT / "github_token.txt"
 VERSION_FILE = DATA / ".version"
 
 # 업데이트로 덮어쓰지 않을 것 (사용자 설정/데이터 보존)

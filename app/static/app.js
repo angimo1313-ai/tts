@@ -254,28 +254,6 @@ function markStep(step, state) {
 }
 
 // ---------- Update (GitHub, git 불필요) ----------
-async function refreshTokenStatus() {
-  try {
-    const r = await (await api("/api/github-token")).json();
-    if (r.set) $("#ghToken").placeholder = "토큰이 저장되어 있습니다 (변경하려면 새로 입력)";
-  } catch (e) {}
-}
-$("#saveTokenBtn").addEventListener("click", async () => {
-  const token = $("#ghToken").value.trim();
-  if (!token) return alert("토큰을 입력해 주세요.");
-  const status = $("#updateStatus");
-  try {
-    await api("/api/github-token", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token }),
-    });
-    $("#ghToken").value = "";
-    $("#ghToken").placeholder = "토큰이 저장되었습니다";
-    status.textContent = "토큰 저장 완료";
-  } catch (e) {
-    status.textContent = "토큰 저장 실패: " + e.message;
-  }
-});
 $("#updateBtn").addEventListener("click", async () => {
   const btn = $("#updateBtn"), status = $("#updateStatus");
   btn.disabled = true; status.textContent = "확인 중…";
@@ -288,7 +266,6 @@ $("#updateBtn").addEventListener("click", async () => {
     btn.disabled = false;
   }
 });
-refreshTokenStatus();
 
 // ---------- Library (보관함) ----------
 function esc(s) {
