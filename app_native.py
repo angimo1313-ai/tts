@@ -159,7 +159,7 @@ class MainWindow(QMainWindow):
         v.addWidget(box)
 
         row = QHBoxLayout()
-        self.gen_btn = QPushButton("생성하기"); self.gen_btn.clicked.connect(self.on_generate)
+        self.gen_btn = QPushButton("생성하기"); self.gen_btn.setObjectName("primary"); self.gen_btn.clicked.connect(self.on_generate)
         self.gen_status = QLabel("")
         row.addWidget(self.gen_btn); row.addWidget(self.gen_status, 1)
         v.addLayout(row)
@@ -236,14 +236,14 @@ class MainWindow(QMainWindow):
         fbtn = QPushButton("파일 선택"); fbtn.clicked.connect(self._pick_file)
         frow.addWidget(self.tr_file, 1); frow.addWidget(fbtn); v.addLayout(frow)
         self.tr_clean = QCheckBox("이미 배경음이 없는 깨끗한 음성 (배경음 제거 건너뛰기)"); v.addWidget(self.tr_clean)
-        self.tr_btn = QPushButton("학습 시작 (음성 추가)"); self.tr_btn.clicked.connect(self.on_train); v.addWidget(self.tr_btn)
+        self.tr_btn = QPushButton("학습 시작 (음성 추가)"); self.tr_btn.setObjectName("primary"); self.tr_btn.clicked.connect(self.on_train); v.addWidget(self.tr_btn)
         self.tr_log = QPlainTextEdit(); self.tr_log.setReadOnly(True); self.tr_log.setMaximumHeight(150); v.addWidget(self.tr_log)
 
         ft = QGroupBox("정밀 학습 (파인튜닝) — 재현도 향상")
         fv = QVBoxLayout(ft)
         fv.addWidget(QLabel("같은 목소리에 음성을 여러 번 추가한 뒤 파인튜닝하면 훨씬 또렷해집니다. (GPU, 수십 분)"))
         self.ft_combo = QComboBox(); fv.addWidget(self.ft_combo)
-        self.ft_btn = QPushButton("파인튜닝 시작"); self.ft_btn.clicked.connect(self.on_finetune); fv.addWidget(self.ft_btn)
+        self.ft_btn = QPushButton("파인튜닝 시작"); self.ft_btn.setObjectName("primary"); self.ft_btn.clicked.connect(self.on_finetune); fv.addWidget(self.ft_btn)
         self.ft_log = QPlainTextEdit(); self.ft_log.setReadOnly(True); self.ft_log.setMaximumHeight(150); fv.addWidget(self.ft_log)
         v.addWidget(ft)
         v.addStretch(1)
@@ -345,7 +345,7 @@ class MainWindow(QMainWindow):
         self.sys_label = QLabel("장치 정보를 불러오는 중…"); v.addWidget(self.sys_label)
         self._load_sysinfo()
         urow = QHBoxLayout()
-        upd = QPushButton("업데이트 확인 및 적용"); upd.clicked.connect(self.on_update)
+        upd = QPushButton("업데이트 확인 및 적용"); upd.setObjectName("primary"); upd.clicked.connect(self.on_update)
         self.upd_status = QLabel("")
         urow.addWidget(upd); urow.addWidget(self.upd_status, 1); v.addLayout(urow)
         v.addWidget(QLabel("<b>로그</b>"))
@@ -445,9 +445,86 @@ class MainWindow(QMainWindow):
                 self.lib_list.addItem(it)
 
 
+QSS = """
+* { font-family: "Malgun Gothic", "Segoe UI", sans-serif; font-size: 14px; color: #f5f5f7; }
+QMainWindow, QWidget { background: #161617; }
+QTabWidget::pane { border: none; background: #161617; }
+QTabBar { background: transparent; }
+QTabBar::tab {
+    background: transparent; color: #98989d; padding: 9px 20px; margin: 6px 3px;
+    border-radius: 980px; font-weight: 600;
+}
+QTabBar::tab:selected { background: #2c2c2e; color: #f5f5f7; }
+QTabBar::tab:hover:!selected { color: #f5f5f7; }
+
+QLabel { background: transparent; }
+
+QPushButton {
+    background: #2c2c2e; color: #f5f5f7; border: 1px solid #3a3a3c;
+    border-radius: 980px; padding: 9px 20px; font-weight: 500;
+}
+QPushButton:hover { background: #3a3a3c; }
+QPushButton:disabled { color: #6e6e73; background: #232325; }
+QPushButton#primary { background: #0071e3; border: none; color: #ffffff; font-weight: 600; }
+QPushButton#primary:hover { background: #0077ed; }
+QPushButton#primary:disabled { background: #0a3b6b; color: #9bb8d8; }
+
+QLineEdit, QTextEdit, QPlainTextEdit, QComboBox {
+    background: #2c2c2e; border: 1px solid transparent; border-radius: 12px;
+    padding: 10px 13px; color: #f5f5f7; selection-background-color: #0071e3;
+}
+QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QComboBox:focus {
+    background: #3a3a3c; border: 1px solid #0071e3;
+}
+QComboBox::drop-down { border: none; width: 26px; }
+QComboBox::down-arrow { image: none; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid #98989d; margin-right: 8px; }
+QComboBox QAbstractItemView {
+    background: #2c2c2e; border: 1px solid #3a3a3c; border-radius: 10px;
+    selection-background-color: #0071e3; padding: 4px; outline: none;
+}
+QPlainTextEdit { font-family: "Consolas", monospace; font-size: 12px; color: #98989d; }
+
+QGroupBox {
+    background: #1c1c1e; border: 1px solid rgba(255,255,255,0.10); border-radius: 16px;
+    margin-top: 14px; padding: 16px 14px 12px 14px; font-weight: 600;
+}
+QGroupBox::title { subcontrol-origin: margin; left: 16px; padding: 0 6px; color: #98989d; }
+
+QListWidget {
+    background: #1c1c1e; border: 1px solid rgba(255,255,255,0.10); border-radius: 12px;
+    padding: 6px; outline: none;
+}
+QListWidget::item { padding: 11px 12px; border-radius: 8px; color: #f5f5f7; }
+QListWidget::item:selected { background: #0071e3; color: #fff; }
+QListWidget::item:hover:!selected { background: #2c2c2e; }
+
+QSlider::groove:horizontal { height: 4px; background: #3a3a3c; border-radius: 2px; }
+QSlider::sub-page:horizontal { background: #0071e3; border-radius: 2px; }
+QSlider::handle:horizontal {
+    background: #ffffff; width: 18px; height: 18px; margin: -7px 0; border-radius: 9px;
+}
+
+QProgressBar { background: #2c2c2e; border: none; border-radius: 3px; height: 6px; }
+QProgressBar::chunk { background: #0071e3; border-radius: 3px; }
+
+QCheckBox { spacing: 9px; background: transparent; }
+QCheckBox::indicator { width: 18px; height: 18px; border-radius: 5px; border: 1px solid #48484a; background: #2c2c2e; }
+QCheckBox::indicator:checked { background: #0071e3; border: 1px solid #0071e3; }
+
+QScrollBar:vertical { background: transparent; width: 10px; margin: 2px; }
+QScrollBar::handle:vertical { background: #3a3a3c; border-radius: 5px; min-height: 30px; }
+QScrollBar::handle:vertical:hover { background: #48484a; }
+QScrollBar::add-line, QScrollBar::sub-line { height: 0; }
+QScrollBar::add-page, QScrollBar::sub-page { background: transparent; }
+QMessageBox { background: #1c1c1e; }
+"""
+
+
 def main():
     app = QApplication(sys.argv)
     app.setApplicationName("Voice Studio")
+    app.setStyle("Fusion")
+    app.setStyleSheet(QSS)
     win = MainWindow()
     win.show()
     sys.exit(app.exec())
