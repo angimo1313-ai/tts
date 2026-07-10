@@ -45,6 +45,10 @@ def run(script_args, extra_env=None):
     if FFMPEG_BIN.exists():
         env["PATH"] = str(FFMPEG_BIN) + os.pathsep + env.get("PATH", "")
     env.setdefault("PYTHONUTF8", "1")
+    # PyTorch 2.6+ 는 torch.load 기본값이 weights_only=True 라, 체크포인트에 들어있는
+    # pathlib.WindowsPath 등을 로드하다 UnpicklingError 로 실패한다. 우리가 만든/공식
+    # 체크포인트만 다루므로 예전 동작(weights_only=False)으로 강제한다.
+    env["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] = "1"
     if extra_env:
         env.update({k: str(v) for k, v in extra_env.items()})
     p = subprocess.run([PY, "-s"] + script_args, env=env, cwd=str(SOVITS_DIR),
