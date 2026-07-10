@@ -16,5 +16,11 @@
   "generate": {
     "max_chars_per_chunk": 250,
     "cross_fade_ms": 120
+  },
+  "update": {
+    "comment": "앱 내 업데이트 대상 GitHub 저장소. 토큰은 설정 탭에서 입력(로컬 data/.github_token 저장).",
+    "owner": "angimo1313-ai",
+    "repo": "tts",
+    "branch": "main"
   }
 }

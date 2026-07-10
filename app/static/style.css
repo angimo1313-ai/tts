@@ -265,6 +265,27 @@ input[type="range"]::-webkit-slider-thumb {
 }
 .about { margin-top: 28px; font-size: 12.5px; color: var(--text-sub); text-align: center; }
 
+/* Progress (generation) */
+.progress-box { margin-top: 18px; }
+.progress-track {
+  height: 6px; border-radius: 3px; background: var(--seg-bg);
+  overflow: hidden; position: relative;
+}
+.progress-fill {
+  height: 100%; border-radius: 3px; background: var(--accent);
+  width: 30%; position: absolute; left: 0;
+  animation: indet 1.4s var(--ease) infinite;
+}
+@keyframes indet {
+  0%   { left: -35%; width: 35%; }
+  60%  { left: 100%; width: 45%; }
+  100% { left: 100%; width: 45%; }
+}
+.progress-info {
+  display: flex; justify-content: space-between;
+  font-size: 12.5px; color: var(--text-sub); margin-top: 8px;
+}
+
 /* File drop + checkbox */
 .filedrop {
   display: flex; align-items: center; justify-content: center;

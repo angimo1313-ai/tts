@@ -43,7 +43,7 @@ Info "가상환경(.venv) 생성 + 앱 의존성"
 if (-not (Test-Path ".venv\Scripts\python.exe")) { & $SysPy -m venv .venv }
 $Py = Join-Path $Root ".venv\Scripts\python.exe"
 & $Py -m pip install --upgrade pip
-& $Py -m pip install fastapi "uvicorn[standard]" python-multipart yt-dlp pydantic
+& $Py -m pip install fastapi "uvicorn[standard]" python-multipart yt-dlp pydantic pywebview
 Ok "완료"
 
 # ---------- 3. ffmpeg ----------

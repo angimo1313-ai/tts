@@ -1,25 +1,23 @@
-"""Voice Studio 데스크톱 런처.
+"""Voice Studio 데스크톱 런처 — 독립 프로그램 창으로 실행.
 
-.venv 의 pythonw.exe 로 실행되면 콘솔 창 없이:
+.venv 의 pythonw.exe 로 실행되면 콘솔 없이:
   1) 로컬 서버(uvicorn)를 백그라운드로 기동
-  2) 준비되면 기본 브라우저로 앱을 염
-  3) 이 창(트레이 없이 조용히 대기)이 살아있는 동안 서버 유지
+  2) 준비되면 네이티브 창(pywebview)으로 앱을 염 (브라우저 아님)
+  3) 창을 닫으면 서버도 함께 종료
 
-바로가기(.lnk)가 이 파일을 pythonw 로 가리킨다. (scripts/make_shortcut.ps1)
+pywebview 가 없거나 실패하면 기본 브라우저로 폴백.
 """
 import os
 import socket
 import subprocess
 import sys
 import time
-import webbrowser
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 PORT = 7860
 URL = f"http://127.0.0.1:{PORT}"
-
-CREATE_NO_WINDOW = 0x08000000  # 서버 서브프로세스도 콘솔 없이
+CREATE_NO_WINDOW = 0x08000000
 
 
 def port_open() -> bool:
@@ -28,35 +26,57 @@ def port_open() -> bool:
         return s.connect_ex(("127.0.0.1", PORT)) == 0
 
 
+def _msgbox(text: str):
+    try:
+        import ctypes
+        ctypes.windll.user32.MessageBoxW(0, text, "Voice Studio", 0x10)
+    except Exception:
+        pass
+
+
 def main():
     py = ROOT / ".venv" / "Scripts" / "python.exe"
     if not py.exists():
-        # 환경 미설치 → 안내 (콘솔 없이 메시지 박스)
-        import ctypes
-        ctypes.windll.user32.MessageBoxW(
-            0, "환경이 설치되지 않았습니다.\n먼저 setup.ps1 을 실행하세요.", "Voice Studio", 0x10)
+        _msgbox("환경이 설치되지 않았습니다.\n먼저 '환경 설치'를 실행하세요.")
         return
 
+    server = None
     if not port_open():
         env = dict(os.environ, PYTHONUTF8="1")
-        subprocess.Popen(
+        server = subprocess.Popen(
             [str(py), "-m", "uvicorn", "app.server:app", "--host", "127.0.0.1", "--port", str(PORT)],
             cwd=str(ROOT), creationflags=CREATE_NO_WINDOW, env=env,
         )
-        # 서버 준비 대기 (최대 40초)
-        for _ in range(80):
+        for _ in range(120):  # 최대 60초 대기
             if port_open():
                 break
+            if server.poll() is not None:
+                _msgbox("서버 시작에 실패했습니다.")
+                return
             time.sleep(0.5)
 
-    webbrowser.open(URL)
-
-    # 서버가 떠 있는 동안 런처 유지 (닫으면 서버는 콘솔세션 종료와 함께 정리)
     try:
-        while port_open():
-            time.sleep(2)
-    except KeyboardInterrupt:
-        pass
+        # 네이티브 창 (Windows: Edge WebView2)
+        import webview
+        webview.create_window("Voice Studio", URL, width=1160, height=840,
+                              min_size=(900, 640))
+        webview.start()  # 창이 닫힐 때까지 블록
+    except Exception:
+        # 폴백: 기본 브라우저
+        import webbrowser
+        webbrowser.open(URL)
+        try:
+            while port_open():
+                time.sleep(2)
+        except KeyboardInterrupt:
+            pass
+    finally:
+        if server is not None and server.poll() is None:
+            server.terminate()
+            try:
+                server.wait(timeout=5)
+            except Exception:
+                server.kill()
 
 
 if __name__ == "__main__":

@@ -225,28 +225,31 @@ async def train_upload(
     return StreamingResponse(stream(), media_type="application/x-ndjson")
 
 
-# ================= Update (GitHub 연동) =================
+# ================= Update (GitHub API, git 불필요) =================
+class TokenReq(BaseModel):
+    token: str
+
+
+@app.get("/api/github-token")
+def github_token_status():
+    from app import updater
+    return {"set": updater.has_token()}
+
+
+@app.post("/api/github-token")
+def save_github_token(req: TokenReq):
+    from app import updater
+    updater.set_token(req.token)
+    return {"ok": True, "set": updater.has_token()}
+
+
 @app.post("/api/update")
 def do_update():
-    import subprocess
-    if not (ROOT / ".git").exists():
-        raise HTTPException(400, "아직 GitHub 저장소에 연동되지 않았습니다.")
+    from app import updater
     try:
-        before = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT,
-                                capture_output=True, text=True).stdout.strip()
-        pull = subprocess.run(["git", "pull", "--ff-only"], cwd=ROOT,
-                              capture_output=True, text=True, timeout=120)
-        after = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT,
-                               capture_output=True, text=True).stdout.strip()
+        return updater.check_and_update()
     except Exception as e:
         raise HTTPException(500, f"업데이트 실패: {e}")
-    if pull.returncode != 0:
-        raise HTTPException(500, f"git pull 실패: {pull.stderr[-300:]}")
-    updated = before != after
-    return {"updated": updated,
-            "message": ("새 버전을 받았습니다. 앱을 재시작하면 적용됩니다." if updated
-                        else "이미 최신 버전입니다."),
-            "before": before[:7], "after": after[:7]}
 
 
 # ================= Static / outputs =================

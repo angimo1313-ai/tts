@@ -9,6 +9,7 @@ dependencies = [
     "python-multipart>=0.0.9",
     "yt-dlp>=2024.8.6",
     "pydantic>=2.7",
+    "pywebview>=5.0",
 ]
 
 [tool.uv]

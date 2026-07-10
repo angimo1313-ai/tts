@@ -114,13 +114,41 @@ async function loadDeviceInfo() {
   }
 }
 
-// ---------- Generate ----------
+// ---------- Generate (with progress) ----------
+let _elapsedTimer = null, _statusTimer = null;
+function startProgress(engine) {
+  $("#genResult").classList.add("hidden");
+  $("#genProgress").classList.remove("hidden");
+  const t0 = Date.now();
+  const statuses = engine === "sovits"
+    ? ["엔진 준비 중…", "한국어 엔진 로딩 중… (최초 실행은 30초~1분 걸려요)", "음성 생성 중…", "마무리 중…"]
+    : ["엔진 준비 중…", "모델 로딩 중…", "음성 생성 중…", "마무리 중…"];
+  const thresholds = [2, 7, 14]; // 초 → statuses 인덱스 1,2,3
+  let idx = 0;
+  $("#genStatus").textContent = statuses[0];
+  $("#genElapsed").textContent = "0초";
+  _elapsedTimer = setInterval(() => {
+    $("#genElapsed").textContent = Math.round((Date.now() - t0) / 1000) + "초";
+  }, 500);
+  _statusTimer = setInterval(() => {
+    const s = (Date.now() - t0) / 1000;
+    let want = 0;
+    thresholds.forEach((th, i) => { if (s >= th) want = i + 1; });
+    if (want !== idx && want < statuses.length) { idx = want; $("#genStatus").textContent = statuses[idx]; }
+  }, 500);
+}
+function stopProgress() {
+  clearInterval(_elapsedTimer); clearInterval(_statusTimer);
+  $("#genProgress").classList.add("hidden");
+}
+
 $("#generateBtn").addEventListener("click", async () => {
   const text = ttsText.value.trim();
   if (!text) return alert("텍스트를 입력해 주세요.");
   const btn = $("#generateBtn");
   btn.classList.add("loading"); btn.disabled = true;
   $(".btn-label").textContent = "생성 중…";
+  startProgress(ENGINE);
   try {
     const res = await api("/api/generate", {
       method: "POST",
@@ -128,12 +156,14 @@ $("#generateBtn").addEventListener("click", async () => {
       body: JSON.stringify({ text, voice: SELECTED_VOICE, engine: ENGINE, device: DEVICE, speed: Number(speed.value) }),
     });
     const data = await res.json();
+    $("#genStatus").textContent = "완료!";
     $("#audioPlayer").src = data.url + "?t=" + Date.now();
     $("#downloadBtn").href = data.url;
     $("#genResult").classList.remove("hidden");
   } catch (e) {
     alert("생성 실패: " + e.message);
   } finally {
+    stopProgress();
     btn.classList.remove("loading"); btn.disabled = false;
     $(".btn-label").textContent = "생성하기";
   }
@@ -223,19 +253,42 @@ function markStep(step, state) {
   if (state === "done") { el.classList.remove("active"); el.classList.add("done"); }
 }
 
-// ---------- Update ----------
+// ---------- Update (GitHub, git 불필요) ----------
+async function refreshTokenStatus() {
+  try {
+    const r = await (await api("/api/github-token")).json();
+    if (r.set) $("#ghToken").placeholder = "토큰이 저장되어 있습니다 (변경하려면 새로 입력)";
+  } catch (e) {}
+}
+$("#saveTokenBtn").addEventListener("click", async () => {
+  const token = $("#ghToken").value.trim();
+  if (!token) return alert("토큰을 입력해 주세요.");
+  const status = $("#updateStatus");
+  try {
+    await api("/api/github-token", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    });
+    $("#ghToken").value = "";
+    $("#ghToken").placeholder = "토큰이 저장되었습니다";
+    status.textContent = "토큰 저장 완료";
+  } catch (e) {
+    status.textContent = "토큰 저장 실패: " + e.message;
+  }
+});
 $("#updateBtn").addEventListener("click", async () => {
   const btn = $("#updateBtn"), status = $("#updateStatus");
   btn.disabled = true; status.textContent = "확인 중…";
   try {
     const r = await (await api("/api/update", { method: "POST" })).json();
-    status.textContent = r.message + (r.updated ? ` (${r.before}→${r.after})` : "");
+    status.textContent = r.message + (r.version ? ` [${r.version}]` : "");
   } catch (e) {
-    status.textContent = "업데이트 확인 실패: " + e.message;
+    status.textContent = "업데이트 실패: " + e.message;
   } finally {
     btn.disabled = false;
   }
 });
+refreshTokenStatus();
 
 // ---------- Library (보관함) ----------
 function esc(s) {

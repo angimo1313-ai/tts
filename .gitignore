@@ -12,6 +12,8 @@ outputs/history.jsonl
 data/raw/
 data/datasets/
 data/voices/
+data/.github_token
+data/.version
 models/
 TEMP/
 
