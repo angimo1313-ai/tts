@@ -40,12 +40,17 @@ Ok (uv --version)
 
 # ---------- 2. Python 3.10 ----------
 Info "Python 3.10 준비"
+# 프로필의 깨진 uv python shim 제거 — 신뢰불가 마운트(Roaming)를 가리켜 uv 를 혼란시킨다.
+Get-ChildItem "$env:USERPROFILE\.local\bin\python*.exe" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
 uv python install 3.10
-Ok "완료"
+# 관리형 파이썬의 실제 exe 경로를 직접 사용 (PATH 상의 shim 회피)
+$py310 = (Get-ChildItem (Join-Path $env:UV_PYTHON_INSTALL_DIR "cpython-3.10*\python.exe") -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
+if (-not $py310) { throw "Python 3.10 을 찾지 못했습니다 ($env:UV_PYTHON_INSTALL_DIR). 앱이 신뢰되는 위치(예: C:\Users\Public\VoiceStudio)에 있는지 확인하세요." }
+Ok "Python: $py310"
 
 # ---------- 3. venv 생성 + 앱(경량) 의존성 ----------
 Info "가상환경(.venv) 생성 + 앱 의존성 설치 (FastAPI, yt-dlp 등)"
-uv venv --python 3.10 .venv
+uv venv --python $py310 .venv
 uv pip install --python .venv fastapi "uvicorn[standard]" python-multipart yt-dlp pydantic
 Ok "완료"
 
