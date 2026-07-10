@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import atexit
 import json
+import os
 import shutil
 import socket
 import subprocess
@@ -26,8 +27,16 @@ SOVITS_PY = ROOT / ".venv-sovits" / "Scripts" / "python.exe"
 _CONFIG = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
 _CFG = _CONFIG.get("sovits", {})
 PORT = int(_CFG.get("port", 9880))
+_LOG_PATH = SOVITS_DIR / "sovits_server.log"
 
 _server: subprocess.Popen | None = None
+
+
+def _log_tail(n: int = 1800) -> str:
+    try:
+        return _LOG_PATH.read_text(encoding="utf-8", errors="ignore")[-n:] or "(로그 비어있음)"
+    except Exception:
+        return "(로그 파일 없음)"
 
 
 # ---------------- config yaml ----------------
@@ -79,18 +88,22 @@ def _start_server(timeout: int = 300):
         cfg = _write_config()
         cmd = [str(SOVITS_PY), "api_v2.py", "-a", "127.0.0.1", "-p", str(PORT),
                "-c", str(cfg.name)]
-        _server = subprocess.Popen(cmd, cwd=str(SOVITS_DIR))
+        # 서버 출력을 로그로 남겨 크래시 원인을 앱에서 볼 수 있게 한다.
+        env = dict(os.environ, PYTHONUTF8="1")
+        log_fh = open(_LOG_PATH, "w", encoding="utf-8", errors="ignore")
+        _server = subprocess.Popen(cmd, cwd=str(SOVITS_DIR), stdout=log_fh,
+                                   stderr=subprocess.STDOUT, env=env)
         atexit.register(_stop_server)
 
     # wait until the server accepts connections (models finished loading)
     t0 = time.time()
     while time.time() - t0 < timeout:
         if _server is not None and _server.poll() is not None:
-            raise RuntimeError("GPT-SoVITS 서버가 시작 중 종료되었습니다. 로그를 확인하세요.")
+            raise RuntimeError("GPT-SoVITS 서버가 시작 중 종료되었습니다.\n\n[로그]\n" + _log_tail())
         if _port_open():
             return
         time.sleep(1.0)
-    raise RuntimeError("GPT-SoVITS 서버 시작 시간 초과.")
+    raise RuntimeError("GPT-SoVITS 서버 시작 시간 초과.\n\n[로그]\n" + _log_tail())
 
 
 def _stop_server():
