@@ -2,13 +2,27 @@
 # 실행: irm https://raw.githubusercontent.com/angimo1313-ai/tts/main/scripts/self_update.ps1 | iex
 $ErrorActionPreference = "Stop"
 
-$app = @("$env:LOCALAPPDATA\Programs\Voice Studio", "C:\Users\Public\VoiceStudio") |
-  Where-Object { Test-Path (Join-Path $_ "launcher.pyw") } | Select-Object -First 1
-if (-not $app) { Write-Host "Voice Studio 설치 폴더를 찾지 못했습니다." -ForegroundColor Red; return }
+# 앱 폴더 자동 탐지 — 현재 폴더 우선, 그다음 흔한 설치 경로들.
+# (irm|iex 로 실행 시엔 먼저 'cd 앱폴더' 하면 현재 폴더로 잡힘)
+$cands = @(
+  (Get-Location).Path,
+  "C:\VoiceStudio",
+  "$env:LOCALAPPDATA\Programs\Voice Studio",
+  "C:\Users\Public\VoiceStudio",
+  "$([Environment]::GetFolderPath('Desktop'))\Voice Studio"
+)
+$app = $cands | Where-Object { $_ -and (Test-Path (Join-Path $_ "launcher.pyw")) } | Select-Object -First 1
+if (-not $app) {
+  Write-Host "Voice Studio 설치 폴더를 찾지 못했습니다." -ForegroundColor Red
+  Write-Host "앱 폴더로 이동한 뒤 다시 실행하세요:  cd '앱폴더경로'  그리고 원라이너 재실행" -ForegroundColor Yellow
+  return
+}
 Write-Host "업데이트 대상: $app" -ForegroundColor Cyan
 
-# 실행 중인 앱 종료 (파일 잠금 해제)
-Get-Process pythonw, python -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+# 실행 중인 앱 종료 (파일 잠금 해제) — 이 앱 폴더의 python/pythonw 만 정확히
+Get-CimInstance Win32_Process -Filter "Name='pythonw.exe' OR Name='python.exe'" |
+  Where-Object { $_.CommandLine -and $_.CommandLine.ToLower().Contains($app.ToLower()) } |
+  ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 Start-Sleep -Seconds 1
 
 # 최신 코드 다운로드(공개 저장소)
