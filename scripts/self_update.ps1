@@ -29,6 +29,10 @@ Write-Host "코드 업데이트 완료" -ForegroundColor Green
 $py = Join-Path $app ".venv\Scripts\python.exe"
 if (Test-Path $py) { & $py -m pip install --quiet --disable-pip-version-check PySide6 2>$null }
 
+# 바로가기를 네이티브 앱으로 갱신
+$mk = Join-Path $app "scripts\make_shortcut.ps1"
+if (Test-Path $mk) { try { & powershell -NoProfile -ExecutionPolicy Bypass -File $mk } catch {} }
+
 # 자동 재실행
 $pyw = Join-Path $app ".venv\Scripts\pythonw.exe"
 if (Test-Path $pyw) {
