@@ -38,3 +38,17 @@ INFO:     127.0.0.1:63370 - "GET /api/system HTTP/1.1" 200 OK
 INFO:     127.0.0.1:63371 - "GET /api/voices HTTP/1.1" 200 OK
 INFO:     127.0.0.1:63371 - "GET /favicon.ico HTTP/1.1" 404 Not Found
 INFO:     127.0.0.1:63400 - "POST /api/update HTTP/1.1" 200 OK
+INFO:     Started server process [31020]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:7860 (Press CTRL+C to quit)
+INFO:     127.0.0.1:57180 - "GET /api/system HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57182 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57182 - "GET /static/style.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57183 - "GET /static/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57182 - "GET /api/system HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57183 - "GET /api/voices HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57183 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:57228 - "GET /api/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57228 - "POST /api/update HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57228 - "POST /api/update HTTP/1.1" 200 OK
