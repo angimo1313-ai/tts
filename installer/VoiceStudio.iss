@@ -44,12 +44,13 @@ Source: "..\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion; \
 Name: "{group}\Voice Studio"; Filename: "{app}\.venv\Scripts\pythonw.exe"; Parameters: """{app}\launcher.pyw"""; WorkingDir: "{app}"; IconFilename: "{app}\app\static\icon.ico"
 Name: "{userdesktop}\Voice Studio"; Filename: "{app}\.venv\Scripts\pythonw.exe"; Parameters: """{app}\launcher.pyw"""; WorkingDir: "{app}"; IconFilename: "{app}\app\static\icon.ico"; Tasks: desktopicon
 ; 환경 설치 (최초 1회, 진행상황 보임). 다운로드 실패 시 이 아이콘으로 재시도.
-Name: "{group}\환경 설치 (최초 1회)"; Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -NoProfile -NoExit -File ""{app}\setup.ps1"" -SoVITS"; WorkingDir: "{app}"; IconFilename: "{app}\app\static\icon.ico"
+; setup-nouv.ps1 = uv 없이 python.org+venv+pip 설치 → 클라우드PC/VDI 등 까다로운 환경 포함 어디서나 동작.
+Name: "{group}\환경 설치 (최초 1회)"; Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -NoProfile -NoExit -File ""{app}\setup-nouv.ps1"" -SoVITS"; WorkingDir: "{app}"; IconFilename: "{app}\app\static\icon.ico"
 
 [Run]
 ; 설치 직후 환경 설치를 '보이는' PowerShell 창으로 시작(선택). nowait 로 위저드는 바로 종료.
 Filename: "powershell.exe"; \
-  Parameters: "-ExecutionPolicy Bypass -NoProfile -NoExit -File ""{app}\setup.ps1"" {code:GetSoVITSFlag}"; \
+  Parameters: "-ExecutionPolicy Bypass -NoProfile -NoExit -File ""{app}\setup-nouv.ps1"" {code:GetSoVITSFlag}"; \
   WorkingDir: "{app}"; Description: "환경 설치 시작"; \
   Flags: postinstall nowait skipifsilent; Tasks: runsetup
 
