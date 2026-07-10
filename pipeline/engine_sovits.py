@@ -43,14 +43,16 @@ def _log_tail(n: int = 1800) -> str:
 def _write_config() -> Path:
     """Write a tts_infer yaml pointing at v2 models with our device/is_half."""
     pm = "GPT_SoVITS/pretrained_models"
-    device = _CFG.get("device", "cuda")
+    device = _CFG.get("device", "auto")
     try:
         import torch
-        if device == "cuda" and not torch.cuda.is_available():
-            device = "cpu"
+        has_cuda = torch.cuda.is_available()
     except Exception:
-        device = "cpu"
-    is_half = bool(_CFG.get("is_half", False)) and device == "cuda"
+        has_cuda = False
+    if device in ("auto", "cuda"):
+        device = "cuda" if has_cuda else "cpu"
+    # FP16 은 GPU 에서만 (CPU 는 미지원/무의미)
+    is_half = bool(_CFG.get("is_half", True)) and device == "cuda"
 
     cfg = {
         "custom": {
@@ -182,7 +184,10 @@ def generate(text: str, voice_dir: Path, device: str, speed: float, out_path: Pa
         "repetition_penalty": float(params.get("repetition_penalty", 1.35)),
         "media_type": "wav",
         "streaming_mode": False,
-        "batch_size": 1,
+        # 장문 속도: 여러 문장을 병렬 배치로 처리
+        "batch_size": int(_CFG.get("batch_size", 4)),
+        "parallel_infer": True,
+        "split_bucket": True,
     }
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(f"http://127.0.0.1:{PORT}/tts", data=data,

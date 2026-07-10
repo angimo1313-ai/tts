@@ -6,11 +6,12 @@
     "model_name": "F5TTS_Base"
   },
   "sovits": {
-    "comment": "GPT-SoVITS 실행 옵션. 개발기 GTX 1060 은 cuDNN 문제로 cpu 사용중. ★ RTX 2060 Super 등 정상 GPU 에서는 device를 'cuda'로, is_half를 true 로 바꾸면 훨씬 빠릅니다.",
+    "comment": "GPT-SoVITS 실행 옵션. device='auto'면 GPU 있으면 자동으로 cuda+FP16(빠름), 없으면 cpu. GPU에서 문제(cuDNN 등) 있으면 device를 'cpu'로 고정.",
     "root": "engines/GPT-SoVITS",
     "version": "v2",
-    "device": "cpu",
-    "is_half": false,
+    "device": "auto",
+    "is_half": true,
+    "batch_size": 4,
     "port": 9880
   },
   "generate": {
