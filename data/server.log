@@ -1,0 +1,12 @@
+INFO:     Started server process [30360]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:7860 (Press CTRL+C to quit)
+INFO:     127.0.0.1:62379 - "GET /api/system HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62381 - "GET /api/system HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62383 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62383 - "GET /static/style.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62384 - "GET /static/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62383 - "GET /api/system HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62384 - "GET /api/voices HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62383 - "GET /favicon.ico HTTP/1.1" 404 Not Found

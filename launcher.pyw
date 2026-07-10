@@ -89,9 +89,18 @@ def main():
     server = None
     if not http_ready():
         env = dict(os.environ, PYTHONUTF8="1")
+        # 콘솔(cmd) 창이 안 뜨도록 pythonw.exe(창 없는 파이썬)로 서버 실행,
+        # 출력은 로그 파일로. (python.exe 는 콘솔 앱이라 창이 뜰 수 있음)
+        pyw = ROOT / ".venv" / "Scripts" / "pythonw.exe"
+        server_exe = str(pyw) if pyw.exists() else str(py)
+        (ROOT / "data").mkdir(parents=True, exist_ok=True)
+        log = open(ROOT / "data" / "server.log", "a", encoding="utf-8", errors="ignore")
+        si = subprocess.STARTUPINFO()
+        si.dwFlags |= subprocess.STARTF_USESHOWWINDOW  # 창 숨김
         server = subprocess.Popen(
-            [str(py), "-m", "uvicorn", "app.server:app", "--host", "127.0.0.1", "--port", str(PORT)],
+            [server_exe, "-m", "uvicorn", "app.server:app", "--host", "127.0.0.1", "--port", str(PORT)],
             cwd=str(ROOT), creationflags=CREATE_NO_WINDOW, env=env,
+            stdout=log, stderr=subprocess.STDOUT, startupinfo=si,
         )
     # 서버가 실제 HTTP 응답을 줄 때까지 대기(최대 60초) — 준비 후에만 창을 연다
     for _ in range(120):
