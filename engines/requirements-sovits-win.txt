@@ -35,3 +35,6 @@ torchmetrics<=1.5
 pydantic<=2.10.6
 ctranslate2>=4.0,<5
 av>=11
+# 파인튜닝(누적 학습)용 — s2_train(torch.utils.tensorboard),
+# s1_train(pytorch_lightning TensorBoardLogger) 이 요구.
+tensorboard
