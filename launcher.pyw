@@ -53,20 +53,19 @@ def _find_browser():
 
 
 def _open_window():
-    """네이티브 창(pywebview/WebView2)을 열고 창이 닫힐 때까지 블록.
-    브라우저(크롬 앱) 방식은 쓰지 않는다 — 진짜 프로그램 창으로만 동작."""
+    """웹 UI 를 pywebview 네이티브 창으로 연다 (직전 상태). 창을 닫으면 반환."""
     try:
         import webview
-    except Exception:
-        _msgbox("네이티브 창 구성요소(pywebview)가 없습니다.\n'업데이트'를 한 번 실행해 주세요.")
-        # 최후: 기본 브라우저
-        import webbrowser
-        webbrowser.open(URL)
-        while http_ready():
-            time.sleep(2)
+        webview.create_window("Voice Studio", URL, width=1180, height=860, min_size=(920, 640))
+        webview.start()
         return
-    webview.create_window("Voice Studio", URL, width=1180, height=860, min_size=(920, 640))
-    webview.start()
+    except Exception:
+        pass
+    # 폴백: 기본 브라우저
+    import webbrowser
+    webbrowser.open(URL)
+    while http_ready():
+        time.sleep(2)
 
 
 def main():

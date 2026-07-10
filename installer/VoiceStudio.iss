@@ -41,8 +41,8 @@ Source: "..\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion; \
 
 [Icons]
 ; 앱 실행 (환경 설치 후 동작). 콘솔 없이 pythonw 로 런처 실행.
-Name: "{group}\Voice Studio"; Filename: "{app}\.venv\Scripts\pythonw.exe"; Parameters: """{app}\app_native.py"""; WorkingDir: "{app}"; IconFilename: "{app}\app\static\icon.ico"
-Name: "{userdesktop}\Voice Studio"; Filename: "{app}\.venv\Scripts\pythonw.exe"; Parameters: """{app}\app_native.py"""; WorkingDir: "{app}"; IconFilename: "{app}\app\static\icon.ico"; Tasks: desktopicon
+Name: "{group}\Voice Studio"; Filename: "{app}\.venv\Scripts\pythonw.exe"; Parameters: """{app}\launcher.pyw"""; WorkingDir: "{app}"; IconFilename: "{app}\app\static\icon.ico"
+Name: "{userdesktop}\Voice Studio"; Filename: "{app}\.venv\Scripts\pythonw.exe"; Parameters: """{app}\launcher.pyw"""; WorkingDir: "{app}"; IconFilename: "{app}\app\static\icon.ico"; Tasks: desktopicon
 ; 환경 설치 (최초 1회, 진행상황 보임). 다운로드 실패 시 이 아이콘으로 재시도.
 ; setup-nouv.ps1 = uv 없이 python.org+venv+pip 설치 → 클라우드PC/VDI 등 까다로운 환경 포함 어디서나 동작.
 Name: "{group}\환경 설치 (최초 1회)"; Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -NoProfile -NoExit -File ""{app}\setup-nouv.ps1"" -SoVITS"; WorkingDir: "{app}"; IconFilename: "{app}\app\static\icon.ico"

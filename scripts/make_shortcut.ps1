@@ -4,7 +4,7 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path $PSScriptRoot -Parent
 
 $pythonw = Join-Path $Root ".venv\Scripts\pythonw.exe"
-$launcher = Join-Path $Root "app_native.py"
+$launcher = Join-Path $Root "launcher.pyw"
 $icon = Join-Path $Root "app\static\icon.ico"
 
 if (-not (Test-Path $pythonw)) { Write-Host "먼저 setup.ps1 을 실행하세요 (.venv 없음)" -ForegroundColor Yellow; exit 1 }

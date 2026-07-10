@@ -9,5 +9,5 @@ if (-not (Test-Path $pyw)) {
 }
 
 # 네이티브 GUI(PySide6) 실행 — 콘솔·웹뷰 없이 진짜 프로그램 창.
-Start-Process $pyw -ArgumentList "app_native.py" -WorkingDirectory $PSScriptRoot
+Start-Process $pyw -ArgumentList "launcher.pyw" -WorkingDirectory $PSScriptRoot
 Write-Host "Voice Studio 를 실행했습니다 — 프로그램 창이 곧 뜹니다." -ForegroundColor Cyan
