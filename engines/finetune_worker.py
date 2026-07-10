@@ -19,6 +19,8 @@ import sys
 from pathlib import Path
 
 SOVITS_DIR = Path(__file__).resolve().parent / "GPT-SoVITS"
+APP_ROOT = SOVITS_DIR.parent.parent          # 프로젝트 루트
+FFMPEG_BIN = APP_ROOT / "tools" / "ffmpeg" / "bin"
 os.chdir(SOVITS_DIR)  # 스크립트들은 cwd=GPT-SoVITS 루트를 가정
 sys.path.insert(0, str(SOVITS_DIR))
 
@@ -38,11 +40,18 @@ def ev(**k):
 
 def run(script_args, extra_env=None):
     env = dict(os.environ)
+    # GPT-SoVITS 스크립트들이 text/module 등을 import 하려면 GPT_SoVITS 가 경로에 있어야 함
+    env["PYTHONPATH"] = str(SOVITS_DIR) + os.pathsep + str(SOVITS_DIR / "GPT_SoVITS")
+    if FFMPEG_BIN.exists():
+        env["PATH"] = str(FFMPEG_BIN) + os.pathsep + env.get("PATH", "")
+    env.setdefault("PYTHONUTF8", "1")
     if extra_env:
         env.update({k: str(v) for k, v in extra_env.items()})
-    p = subprocess.run([PY, "-s"] + script_args, env=env, cwd=str(SOVITS_DIR))
+    p = subprocess.run([PY, "-s"] + script_args, env=env, cwd=str(SOVITS_DIR),
+                       capture_output=True, text=True, encoding="utf-8", errors="ignore")
     if p.returncode != 0:
-        raise RuntimeError(f"{script_args[0]} 실패 (exit {p.returncode})")
+        tail = ((p.stdout or "") + "\n" + (p.stderr or "")).strip()[-1200:]
+        raise RuntimeError(f"{script_args[0]} 실패 (exit {p.returncode})\n{tail}")
 
 
 def main():
@@ -58,6 +67,12 @@ def main():
     opt_dir = f"logs/{exp_name}"
     os.makedirs(opt_dir, exist_ok=True)
     Path("TEMP").mkdir(exist_ok=True)
+
+    # 리스트 파일 BOM 제거 — BOM 이 붙으면 첫 줄 wav 파일명 앞에 U+FEFF 가 끼어
+    # ffmpeg 가 "Illegal byte sequence" 로 파일을 못 여는 문제를 방지한다.
+    lp = Path(list_path)
+    if lp.exists():
+        lp.write_text(lp.read_text(encoding="utf-8-sig"), encoding="utf-8")
 
     common = {
         "inp_text": list_path, "inp_wav_dir": wav_dir, "exp_name": exp_name,
