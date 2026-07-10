@@ -67,12 +67,9 @@ if ($Cpu) { & $Py -m pip install torch torchaudio }
 else { & $Py -m pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu118 }
 Ok "완료"
 
-# ---------- 5. 전처리 + F5-TTS ----------
-Info "전처리 스택 + F5-TTS 설치"
+# ---------- 5. 전처리 스택 (학습용 whisper/demucs) ----------
+Info "전처리 스택 설치 (faster-whisper, demucs)"
 & $Py -m pip install faster-whisper demucs soundfile librosa
-& $Py -m pip install f5-tts
-& $Py -m pip install "transformers==4.49.0" "datasets==3.6.0" "pyarrow==17.0.0"
-& $Py -m pip uninstall -y torchcodec 2>$null
 Ok "완료"
 
 # ---------- 6. (옵션) GPT-SoVITS ----------

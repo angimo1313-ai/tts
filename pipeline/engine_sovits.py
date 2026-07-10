@@ -95,8 +95,13 @@ def _start_server(timeout: int = 300):
         # 서버 출력을 로그로 남겨 크래시 원인을 앱에서 볼 수 있게 한다.
         env = dict(os.environ, PYTHONUTF8="1")
         log_fh = open(_LOG_PATH, "w", encoding="utf-8", errors="ignore")
+        # CMD 창이 안 뜨도록 콘솔 숨김
+        CREATE_NO_WINDOW = 0x08000000
+        si = subprocess.STARTUPINFO()
+        si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         _server = subprocess.Popen(cmd, cwd=str(SOVITS_DIR), stdout=log_fh,
-                                   stderr=subprocess.STDOUT, env=env)
+                                   stderr=subprocess.STDOUT, env=env,
+                                   creationflags=CREATE_NO_WINDOW, startupinfo=si)
         atexit.register(_stop_server)
 
     # wait until the server accepts connections (models finished loading)

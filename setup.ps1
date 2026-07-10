@@ -89,15 +89,6 @@ Info "전처리 스택 설치 (faster-whisper, demucs, soundfile)"
 uv pip install --python .venv faster-whisper demucs soundfile librosa
 Ok "완료"
 
-# ---------- 7. F5-TTS ----------
-Info "F5-TTS 설치"
-uv pip install --python .venv f5-tts
-# 초신형 transformers/datasets 5.x + pyarrow 24 는 Windows 에서 네이티브 충돌을 일으킴.
-# F5-TTS 가 검증된 안정 조합으로 핀 고정하고, 깨진 torchcodec(선택 의존성) 제거.
-Ok "안정 버전 핀 고정 (transformers/datasets/pyarrow)"
-uv pip install --python .venv "transformers==4.49.0" "datasets==3.6.0" "pyarrow==17.0.0"
-uv pip uninstall --python .venv torchcodec 2>$null
-Ok "완료"
 
 # ---------- 8. (옵션) GPT-SoVITS (한국어 주력 엔진) ----------
 if ($SoVITS) {
