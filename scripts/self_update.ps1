@@ -32,7 +32,7 @@ if (Test-Path $py) { & $py -m pip install --quiet --disable-pip-version-check Py
 # 자동 재실행
 $pyw = Join-Path $app ".venv\Scripts\pythonw.exe"
 if (Test-Path $pyw) {
-  Start-Process $pyw -ArgumentList "launcher.pyw" -WorkingDirectory $app
+  Start-Process $pyw -ArgumentList "app_native.py" -WorkingDirectory $app
   Write-Host "업데이트 완료 — 앱을 다시 실행했습니다!" -ForegroundColor Green
 } else {
   Write-Host "업데이트 완료 — 앱을 다시 켜세요." -ForegroundColor Green
