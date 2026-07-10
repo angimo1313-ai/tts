@@ -18,6 +18,12 @@
     "max_chars_per_chunk": 250,
     "cross_fade_ms": 120
   },
+  "train": {
+    "comment": "학습 속도 옵션. 제로샷은 참조 클립만 필요하므로 앞부분 일정 시간만 받아쓰기. whisper_model: tiny/base/small(정확·느림).",
+    "max_transcribe_sec": 180,
+    "whisper_model": "small",
+    "max_clips": 40
+  },
   "update": {
     "comment": "앱 내 업데이트 대상 GitHub 저장소. 토큰은 설정 탭에서 입력(로컬 data/.github_token 저장).",
     "owner": "angimo1313-ai",
