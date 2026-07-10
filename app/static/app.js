@@ -1,0 +1,292 @@
+// ===== Voice Studio — frontend logic =====
+
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => document.querySelectorAll(sel);
+
+// ---------- Theme ----------
+const THEME_KEY = "vs-theme"; // "light" | "dark" | "system"
+
+function systemTheme() {
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+function applyTheme(pref) {
+  const resolved = pref === "system" ? systemTheme() : pref;
+  document.documentElement.setAttribute("data-theme", resolved);
+}
+function getThemePref() {
+  return localStorage.getItem(THEME_KEY) || "system";
+}
+function setThemePref(pref) {
+  localStorage.setItem(THEME_KEY, pref);
+  applyTheme(pref);
+  // keep settings segmented in sync
+  $$("#themeSeg .seg").forEach((b) => b.classList.toggle("active", b.dataset.theme === pref));
+}
+
+// follow system when in system mode
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+  if (getThemePref() === "system") applyTheme("system");
+});
+
+// topbar quick toggle: flips between light/dark explicitly
+$("#themeToggle").addEventListener("click", () => {
+  const current = document.documentElement.getAttribute("data-theme");
+  setThemePref(current === "dark" ? "light" : "dark");
+});
+
+// settings segmented control
+$$("#themeSeg .seg").forEach((btn) =>
+  btn.addEventListener("click", () => setThemePref(btn.dataset.theme))
+);
+
+setThemePref(getThemePref());
+
+// ---------- Tab navigation ----------
+function switchView(name) {
+  $$(".tab").forEach((t) => t.classList.toggle("active", t.dataset.view === name));
+  $$(".view").forEach((v) => v.classList.toggle("active", v.id === `view-${name}`));
+  if (name === "library") loadLibrary();
+}
+$$("#tabs .tab").forEach((t) => t.addEventListener("click", () => switchView(t.dataset.view)));
+document.addEventListener("click", (e) => {
+  const goto = e.target.closest("[data-goto]");
+  if (goto) { e.preventDefault(); switchView(goto.dataset.goto); }
+});
+
+// ---------- Generic segmented controls ----------
+function bindSegmented(containerSel, onChange) {
+  const btns = $$(`${containerSel} .seg`);
+  btns.forEach((b) =>
+    b.addEventListener("click", () => {
+      btns.forEach((x) => x.classList.toggle("active", x === b));
+      onChange && onChange(b.dataset);
+    })
+  );
+}
+let ENGINE = "f5";
+let DEVICE = "cuda";
+bindSegmented("#engineSeg", (d) => (ENGINE = d.engine));
+bindSegmented("#deviceSeg", (d) => (DEVICE = d.device));
+
+// ---------- Char counter + speed ----------
+const ttsText = $("#ttsText");
+ttsText.addEventListener("input", () => ($("#charCount").textContent = ttsText.value.length));
+const speed = $("#speed");
+speed.addEventListener("input", () => ($("#speedVal").textContent = Number(speed.value).toFixed(2) + "×"));
+
+// ---------- API helpers ----------
+async function api(path, opts) {
+  const res = await fetch(path, opts);
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || res.statusText);
+  return res;
+}
+
+// ---------- Load voices + device info ----------
+let SELECTED_VOICE = null;
+async function loadVoices() {
+  try {
+    const voices = await (await api("/api/voices")).json();
+    const picker = $("#voicePicker");
+    if (!voices.length) return; // keep empty hint
+    picker.innerHTML = "";
+    voices.forEach((v, i) => {
+      const chip = document.createElement("div");
+      chip.className = "voice-chip" + (i === 0 ? " selected" : "");
+      chip.textContent = v.name;
+      chip.addEventListener("click", () => {
+        $$(".voice-chip").forEach((c) => c.classList.remove("selected"));
+        chip.classList.add("selected");
+        SELECTED_VOICE = v.id;
+      });
+      picker.appendChild(chip);
+    });
+    SELECTED_VOICE = voices[0].id;
+  } catch (e) { /* server may not be ready */ }
+}
+async function loadDeviceInfo() {
+  try {
+    const info = await (await api("/api/system")).json();
+    $("#deviceInfo").textContent = info.gpu
+      ? `${info.gpu} · CUDA ${info.cuda || "?"} · ${info.torch ? "PyTorch " + info.torch : "PyTorch 미설치"}`
+      : "GPU 미감지 — CPU로 실행됩니다. (PyTorch 미설치 시 설정 필요)";
+  } catch (e) {
+    $("#deviceInfo").textContent = "장치 정보를 불러올 수 없습니다.";
+  }
+}
+
+// ---------- Generate ----------
+$("#generateBtn").addEventListener("click", async () => {
+  const text = ttsText.value.trim();
+  if (!text) return alert("텍스트를 입력해 주세요.");
+  const btn = $("#generateBtn");
+  btn.classList.add("loading"); btn.disabled = true;
+  $(".btn-label").textContent = "생성 중…";
+  try {
+    const res = await api("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, voice: SELECTED_VOICE, engine: ENGINE, device: DEVICE, speed: Number(speed.value) }),
+    });
+    const data = await res.json();
+    $("#audioPlayer").src = data.url + "?t=" + Date.now();
+    $("#downloadBtn").href = data.url;
+    $("#genResult").classList.remove("hidden");
+  } catch (e) {
+    alert("생성 실패: " + e.message);
+  } finally {
+    btn.classList.remove("loading"); btn.disabled = false;
+    $(".btn-label").textContent = "생성하기";
+  }
+});
+
+// ---------- Source toggle (URL vs file) ----------
+let SOURCE = "url";
+bindSegmented("#sourceSeg", (d) => {
+  SOURCE = d.source;
+  $("#urlField").classList.toggle("hidden", SOURCE !== "url");
+  $("#fileField").classList.toggle("hidden", SOURCE !== "file");
+});
+const audioFile = $("#audioFile");
+audioFile.addEventListener("change", () => {
+  const f = audioFile.files[0];
+  $("#fileLabel").textContent = f ? `📄 ${f.name}` : "wav · mp3 · m4a 파일 선택 (10~30초 깨끗한 음성 권장)";
+  if (f) $("#cleanChk").checked = true; // uploads are usually already clean
+});
+
+// ---------- Train (with live progress via streaming) ----------
+$("#trainBtn").addEventListener("click", async () => {
+  const name = $("#voiceName").value.trim();
+  if (!name) return alert("목소리 이름을 입력해 주세요.");
+
+  const clean = $("#cleanChk").checked;
+  let res;
+  const btn = $("#trainBtn");
+  const log = $("#trainLog");
+
+  const startUI = () => {
+    btn.disabled = true; btn.textContent = "학습 중…";
+    log.classList.remove("hidden"); log.textContent = "";
+    $$("#trainSteps .step").forEach((s) => s.classList.remove("active", "done"));
+  };
+
+  try {
+    if (SOURCE === "file") {
+      const f = audioFile.files[0];
+      if (!f) return alert("음성 파일을 선택해 주세요.");
+      startUI();
+      const fd = new FormData();
+      fd.append("file", f);
+      fd.append("name", name);
+      fd.append("engine", ENGINE);
+      fd.append("device", DEVICE);
+      fd.append("separate", (!clean).toString());
+      res = await fetch("/api/train_upload", { method: "POST", body: fd });
+    } else {
+      const url = $("#ytUrl").value.trim();
+      if (!url) return alert("유튜브 주소를 입력해 주세요.");
+      startUI();
+      res = await fetch("/api/train", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, url, engine: ENGINE, device: DEVICE, separate: !clean }),
+      });
+    }
+    // stream newline-delimited JSON events
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split("\n");
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        const ev = JSON.parse(line);
+        if (ev.step) markStep(ev.step, ev.state);
+        if (ev.msg) { log.textContent += ev.msg + "\n"; log.scrollTop = log.scrollHeight; }
+      }
+    }
+    loadVoices();
+  } catch (e) {
+    log.textContent += "\n[오류] " + e.message + "\n";
+  } finally {
+    btn.disabled = false; btn.textContent = "학습 시작";
+  }
+});
+
+function markStep(step, state) {
+  const el = document.querySelector(`.step[data-step="${step}"]`);
+  if (!el) return;
+  if (state === "start") el.classList.add("active");
+  if (state === "done") { el.classList.remove("active"); el.classList.add("done"); }
+}
+
+// ---------- Update ----------
+$("#updateBtn").addEventListener("click", async () => {
+  const btn = $("#updateBtn"), status = $("#updateStatus");
+  btn.disabled = true; status.textContent = "확인 중…";
+  try {
+    const r = await (await api("/api/update", { method: "POST" })).json();
+    status.textContent = r.message + (r.updated ? ` (${r.before}→${r.after})` : "");
+  } catch (e) {
+    status.textContent = "업데이트 확인 실패: " + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+// ---------- Library (보관함) ----------
+function esc(s) {
+  return (s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+function fmtDate(iso) {
+  try { return new Date(iso).toLocaleString("ko-KR", { dateStyle: "short", timeStyle: "short" }); }
+  catch (e) { return iso || ""; }
+}
+async function loadLibrary() {
+  const list = $("#libraryList");
+  try {
+    const items = await (await api("/api/history")).json();
+    if (!items.length) {
+      list.innerHTML = '<div class="empty-hint">아직 생성한 음성이 없습니다.</div>';
+      return;
+    }
+    list.innerHTML = "";
+    items.forEach((it) => {
+      const el = document.createElement("div");
+      el.className = "lib-item";
+      const engine = it.engine === "sovits" ? "GPT-SoVITS" : "F5-TTS";
+      el.innerHTML = `
+        <div class="lib-main">
+          <div class="lib-text" title="${esc(it.text)}">${esc(it.text)}</div>
+          <div class="lib-meta">
+            <span class="lib-badge">${esc(it.voice_name || "-")}</span>
+            <span class="lib-badge">${engine}</span>
+            <span>${fmtDate(it.created)}</span>
+          </div>
+        </div>
+        <audio controls src="${it.url}"></audio>
+        <div class="lib-actions">
+          <a class="icon-btn" href="${it.url}" download>다운로드</a>
+          <button class="icon-btn danger" data-file="${esc(it.file)}">삭제</button>
+        </div>`;
+      el.querySelector(".danger").addEventListener("click", async () => {
+        if (!confirm("이 음성을 삭제할까요? 되돌릴 수 없습니다.")) return;
+        await api("/api/history/delete", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ file: it.file }),
+        });
+        loadLibrary();
+      });
+      list.appendChild(el);
+    });
+  } catch (e) {
+    list.innerHTML = '<div class="empty-hint">보관함을 불러올 수 없습니다.</div>';
+  }
+}
+
+// ---------- init ----------
+loadVoices();
+loadDeviceInfo();

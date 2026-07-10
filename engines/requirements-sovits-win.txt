@@ -1,0 +1,37 @@
+# GPT-SoVITS — Windows(빌드도구 없음) 한국어 추론용 축소 의존성.
+# 원본 requirements.txt 에서 컴파일 필요/비한국어/학습전용 패키지를 제외.
+# 제외: pyopenjtalk(일어,컴파일) jieba_fast(중어,컴파일) ToJyutping(광둥어)
+#       funasr modelscope(학습/ASR 전용, 대용량)  --no-binary=opencc(→바이너리 사용)
+numpy<2.0
+scipy
+librosa==0.10.2
+numba
+pytorch-lightning>=2.4
+gradio<5
+ffmpeg-python
+onnxruntime-gpu
+tqdm
+cn2an
+pypinyin
+g2p_en
+sentencepiece
+transformers>=4.43,<=4.50
+peft<0.18.0
+chardet
+PyYAML
+psutil
+jieba
+split-lang
+fast_langdetect>=0.3.1
+wordsegment
+rotary_embedding_torch
+opencc
+g2pk2
+ko_pron
+kiwipiepy
+fastapi[standard]>=0.115.2
+x_transformers
+torchmetrics<=1.5
+pydantic<=2.10.6
+ctranslate2>=4.0,<5
+av>=11

@@ -1,0 +1,30 @@
+# ===== Python / uv 환경 =====
+.venv/
+.venv-sovits/
+__pycache__/
+*.pyc
+uv.lock
+
+# ===== 생성물·데이터(대용량/개인) =====
+outputs/*.wav
+outputs/history.jsonl
+data/raw/
+data/datasets/
+data/voices/
+models/
+TEMP/
+
+# ===== 번들 바이너리(setup 이 자동 배치) =====
+tools/ffmpeg/
+
+# ===== 클론된 외부 엔진(대용량, setup 이 자동 클론) =====
+# 단, 우리 소스인 engines/*.py, engines/*.txt 는 추적한다.
+engines/GPT-SoVITS/
+
+# ===== OS =====
+Thumbs.db
+.DS_Store
+
+# ===== 설치 빌드 산출물 =====
+installer/Output/
+*.exe.tmp

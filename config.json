@@ -1,0 +1,20 @@
+{
+  "f5": {
+    "comment": "F5-TTS 한국어 체크포인트. 비워두면 F5-TTS 기본(다국어) 모델을 사용합니다. Hugging Face 저장소나 로컬 .safetensors 경로를 넣으세요.",
+    "ckpt_file": "",
+    "vocab_file": "",
+    "model_name": "F5TTS_Base"
+  },
+  "sovits": {
+    "comment": "GPT-SoVITS 실행 옵션. 개발기 GTX 1060 은 cuDNN 문제로 cpu 사용중. ★ RTX 2060 Super 등 정상 GPU 에서는 device를 'cuda'로, is_half를 true 로 바꾸면 훨씬 빠릅니다.",
+    "root": "engines/GPT-SoVITS",
+    "version": "v2",
+    "device": "cpu",
+    "is_half": false,
+    "port": 9880
+  },
+  "generate": {
+    "max_chars_per_chunk": 250,
+    "cross_fade_ms": 120
+  }
+}

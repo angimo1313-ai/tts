@@ -1,0 +1,15 @@
+[project]
+name = "korean-voice-tts"
+version = "0.1.0"
+description = "Korean voice-cloning TTS with a clean local GUI (YouTube voice learning, long-form natural speech)"
+requires-python = ">=3.10,<3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "python-multipart>=0.0.9",
+    "yt-dlp>=2024.8.6",
+    "pydantic>=2.7",
+]
+
+[tool.uv]
+# 무거운 ML 의존성(torch, f5-tts, demucs 등)은 별도 단계에서 설치합니다.

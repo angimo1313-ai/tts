@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voice Studio</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <!-- 상단 바 -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">◐</span>
+      <span class="brand-name">Voice Studio</span>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-view="generate">음성 만들기</button>
+      <button class="tab" data-view="train">목소리 학습</button>
+      <button class="tab" data-view="library">보관함</button>
+      <button class="tab" data-view="settings">설정</button>
+    </nav>
+    <button class="theme-toggle" id="themeToggle" title="테마 전환" aria-label="테마 전환">
+      <span class="theme-icon sun">☀︎</span>
+      <span class="theme-icon moon">☾</span>
+    </button>
+  </header>
+
+  <main class="content">
+    <!-- ===== 음성 만들기 ===== -->
+    <section class="view active" id="view-generate">
+      <div class="panel">
+        <div class="panel-head">
+          <h1>음성 만들기</h1>
+          <p class="sub">텍스트를 입력하면 선택한 목소리로 자연스럽게 읽어 드립니다.</p>
+        </div>
+
+        <div class="field">
+          <label>목소리</label>
+          <div class="voice-picker" id="voicePicker">
+            <div class="empty-hint">학습된 목소리가 없습니다. <a href="#" data-goto="train">목소리 학습</a>에서 먼저 만들어 주세요.</div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="ttsText">텍스트</label>
+          <textarea id="ttsText" rows="8" placeholder="여기에 읽을 문장을 입력하세요. 장문도 자동으로 문장 단위로 나눠 자연스럽게 이어 붙입니다."></textarea>
+          <div class="counter"><span id="charCount">0</span>자</div>
+        </div>
+
+        <div class="row">
+          <div class="field small">
+            <label for="speed">속도</label>
+            <input type="range" id="speed" min="0.5" max="1.5" step="0.05" value="1.0" />
+            <span class="range-val" id="speedVal">1.00×</span>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn primary" id="generateBtn">
+            <span class="btn-label">생성하기</span>
+          </button>
+        </div>
+
+        <div class="result hidden" id="genResult">
+          <audio controls id="audioPlayer"></audio>
+          <a class="btn ghost" id="downloadBtn" download>다운로드</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 목소리 학습 ===== -->
+    <section class="view" id="view-train">
+      <div class="panel">
+        <div class="panel-head">
+          <h1>목소리 학습</h1>
+          <p class="sub">유튜브 영상의 음성으로 나만의 목소리를 만듭니다.</p>
+        </div>
+
+        <div class="field">
+          <label for="voiceName">목소리 이름</label>
+          <input type="text" id="voiceName" placeholder="예: 내레이터A" />
+        </div>
+
+        <div class="field">
+          <label>음성 소스</label>
+          <div class="segmented" id="sourceSeg">
+            <button class="seg active" data-source="url">유튜브 주소</button>
+            <button class="seg" data-source="file">파일 업로드</button>
+          </div>
+        </div>
+
+        <div class="field" id="urlField">
+          <label for="ytUrl">유튜브 주소</label>
+          <input type="text" id="ytUrl" placeholder="https://www.youtube.com/watch?v=..." />
+          <div class="hint">한 사람이 또렷하게 말하는, 배경음악이 적은 영상일수록 좋습니다. (5~10분 분량 권장)</div>
+        </div>
+
+        <div class="field hidden" id="fileField">
+          <label for="audioFile">음성 파일</label>
+          <label class="filedrop" id="fileDrop">
+            <input type="file" id="audioFile" accept="audio/*,.wav,.mp3,.m4a,.flac" hidden />
+            <span id="fileLabel">wav · mp3 · m4a 파일 선택 (10~30초 깨끗한 음성 권장)</span>
+          </label>
+          <div class="hint">제로샷 복제는 3~30초면 충분합니다. 더 닮게 하려면 더 긴 음성을 올리세요.</div>
+        </div>
+
+        <div class="field">
+          <label class="checkline">
+            <input type="checkbox" id="cleanChk" />
+            <span>이미 배경음이 없는 깨끗한 음성입니다 (배경음 제거 건너뛰기 · 더 빠름)</span>
+          </label>
+        </div>
+
+        <div class="steps" id="trainSteps">
+          <div class="step" data-step="download"><span class="dot"></span>음성 추출</div>
+          <div class="step" data-step="separate"><span class="dot"></span>배경음 제거</div>
+          <div class="step" data-step="segment"><span class="dot"></span>문장 분할·자막</div>
+          <div class="step" data-step="train"><span class="dot"></span>학습</div>
+        </div>
+
+        <div class="actions">
+          <button class="btn primary" id="trainBtn">학습 시작</button>
+        </div>
+
+        <div class="log hidden" id="trainLog"></div>
+
+        <div class="consent-note">
+          ⚠︎ 실존 인물의 목소리 복제는 개인 학습·연구 용도로만 사용하세요. 공개·상업적 사용은 당사자 동의가 필요할 수 있습니다.
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 보관함 ===== -->
+    <section class="view" id="view-library">
+      <div class="panel">
+        <div class="panel-head">
+          <h1>보관함</h1>
+          <p class="sub">지금까지 생성한 음성이 자동으로 보관됩니다. 삭제는 직접 누를 때만 이뤄집니다.</p>
+        </div>
+        <div id="libraryList" class="library-list">
+          <div class="empty-hint">아직 생성한 음성이 없습니다.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 설정 ===== -->
+    <section class="view" id="view-settings">
+      <div class="panel">
+        <div class="panel-head">
+          <h1>설정</h1>
+          <p class="sub">모델과 실행 환경을 선택합니다.</p>
+        </div>
+
+        <div class="field">
+          <label>TTS 엔진</label>
+          <div class="segmented" id="engineSeg">
+            <button class="seg active" data-engine="f5">F5-TTS <small>빠름·쉬움</small></button>
+            <button class="seg" data-engine="sovits">GPT-SoVITS <small>재현도 높음</small></button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>연산 장치</label>
+          <div class="segmented" id="deviceSeg">
+            <button class="seg active" data-device="cuda">GPU (CUDA)</button>
+            <button class="seg" data-device="cpu">CPU</button>
+          </div>
+          <div class="hint" id="deviceInfo">장치 정보를 불러오는 중…</div>
+        </div>
+
+        <div class="field">
+          <label>테마</label>
+          <div class="segmented" id="themeSeg">
+            <button class="seg" data-theme="light">라이트</button>
+            <button class="seg" data-theme="dark">다크</button>
+            <button class="seg active" data-theme="system">시스템</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>업데이트</label>
+          <div class="row" style="align-items:center; gap:12px;">
+            <button class="btn ghost" id="updateBtn">업데이트 확인</button>
+            <span class="hint" id="updateStatus" style="margin:0;"></span>
+          </div>
+        </div>
+
+        <div class="about">Voice Studio · 로컬 실행 · 오픈소스 TTS</div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
