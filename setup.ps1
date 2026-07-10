@@ -130,6 +130,10 @@ if ($SoVITS) {
   # 축소 의존성(Windows 휠 전용: 컴파일 필요/비한국어 패키지 제외)
   uv pip install --python .venv-sovits -r (Join-Path $Root "engines\requirements-sovits-win.txt")
 
+  # 영어 처리용 NLTK 데이터(없으면 생성 실패) + 언어감지 캐시 폴더
+  & (Join-Path $Root ".venv-sovits\Scripts\python.exe") -c "import nltk; [nltk.download(x) for x in ['averaged_perceptron_tagger_eng','averaged_perceptron_tagger','cmudict']]"
+  New-Item -ItemType Directory -Force (Join-Path $sov "GPT_SoVITS\pretrained_models\fast_langdetect") | Out-Null
+
   # jieba_fast(중국어,컴파일 불가) → 순수 파이썬 jieba 로 대체하는 shim
   $shimDir = Join-Path $Root ".venv-sovits\Lib\site-packages\jieba_fast"
   New-Item -ItemType Directory -Force $shimDir | Out-Null

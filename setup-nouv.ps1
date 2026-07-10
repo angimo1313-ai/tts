@@ -98,6 +98,10 @@ if ($SoVITS) {
   else { & $PyS -m pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu118 }
   & $PyS -m pip install -r (Join-Path $Root "engines\requirements-sovits-win.txt")
 
+  # 영어 처리용 NLTK 데이터(없으면 생성 실패) + 언어감지 캐시 폴더
+  & $PyS -c "import nltk; [nltk.download(x) for x in ['averaged_perceptron_tagger_eng','averaged_perceptron_tagger','cmudict']]"
+  New-Item -ItemType Directory -Force (Join-Path $sov "GPT_SoVITS\pretrained_models\fast_langdetect") | Out-Null
+
   # 컴파일 회피 shim (jieba_fast, eunjeon) + korean.py 패치
   $sp = Join-Path $Root ".venv-sovits\Lib\site-packages"
   New-Item -ItemType Directory -Force (Join-Path $sp "jieba_fast") | Out-Null
