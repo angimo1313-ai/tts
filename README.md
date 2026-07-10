@@ -21,6 +21,30 @@
 | `.\setup.ps1 -Cpu` | GPU 없이 CPU 실행 |
 | `.\setup.ps1 -SoVITS` | GPT-SoVITS 까지 설치 |
 
+## 데스크톱 앱처럼 실행하기
+```powershell
+.\scripts\make_shortcut.ps1   # 바탕화면 + 시작메뉴에 'Voice Studio' 바로가기 생성
+```
+이후 **바탕화면의 Voice Studio 아이콘을 더블클릭**하면 콘솔 없이 앱이 열립니다.
+(런처: `launcher.pyw` — 서버를 조용히 띄우고 브라우저를 자동으로 엽니다.)
+
+## 설치 파일(.exe) 만들기
+[Inno Setup](https://jrsoftware.org/isdl.php) 설치 후:
+```powershell
+ISCC.exe installer\VoiceStudio.iss    # → installer\Output\VoiceStudio-Setup.exe
+```
+이 설치 파일은 소스를 배치하고(수 MB), 설치 마지막에 `setup.ps1` 로 환경(수 GB)을 구성합니다.
+
+## 업데이트 (GitHub 연동 시)
+```powershell
+.\update.ps1        # 최신 코드 받기(git pull) + 의존성 동기화
+```
+또는 앱 **설정 탭 → 업데이트 확인** 버튼. (GitHub 원격 연동이 되어 있어야 합니다.)
+
+## 보관함
+생성한 모든 음성은 `outputs/` 에 **자동 보관**되고 앱의 **보관함 탭**에서 재생·다운로드할 수 있습니다.
+삭제는 직접 삭제 버튼을 누를 때만 이뤄집니다(자동 삭제 없음).
+
 ## 사용 흐름
 1. **목소리 학습** 탭 → 이름 + 유튜브 주소 입력 → `학습 시작`
    - 음성 추출(yt-dlp) → 배경음 제거(Demucs) → 문장 분할·자막(faster-whisper) → 학습
