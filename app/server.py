@@ -39,6 +39,11 @@ class GenerateReq(BaseModel):
     engine: str = "f5"
     device: str = "cuda"
     speed: float = 1.0
+    # 발음·톤 튜닝(GPT-SoVITS)
+    temperature: float = 1.0
+    top_k: int = 15
+    top_p: float = 1.0
+    repetition_penalty: float = 1.35
 
 
 class TrainReq(BaseModel):
@@ -94,6 +99,8 @@ def generate(req: GenerateReq):
         out_path = synth.generate(
             text=req.text, voice_id=req.voice, engine=req.engine,
             device=req.device, speed=req.speed, out_dir=OUTPUTS,
+            params={"temperature": req.temperature, "top_k": req.top_k,
+                    "top_p": req.top_p, "repetition_penalty": req.repetition_penalty},
         )
     except NotImplementedError as e:
         raise HTTPException(501, str(e))

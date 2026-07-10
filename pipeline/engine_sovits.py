@@ -156,12 +156,14 @@ def train(voice_id: str, dataset_dir: Path, device: str, out_dir: Path) -> dict:
 
 
 # ---------------- generate ----------------
-def generate(text: str, voice_dir: Path, device: str, speed: float, out_path: Path) -> Path:
+def generate(text: str, voice_dir: Path, device: str, speed: float, out_path: Path,
+             params: dict | None = None) -> Path:
     ref_wav = voice_dir / "ref.wav"
     ref_txt = voice_dir / "ref.txt"
     if not ref_wav.exists():
         raise RuntimeError("이 목소리의 참조 클립이 없습니다. 다시 학습해 주세요.")
     ref_text = ref_txt.read_text(encoding="utf-8").strip() if ref_txt.exists() else ""
+    params = params or {}
 
     _start_server()
 
@@ -173,6 +175,11 @@ def generate(text: str, voice_dir: Path, device: str, speed: float, out_path: Pa
         "prompt_lang": "ko",
         "text_split_method": "cut5",   # 장문을 문장 단위로 분할
         "speed_factor": float(speed),
+        # 발음·톤 튜닝
+        "temperature": float(params.get("temperature", 1.0)),
+        "top_k": int(params.get("top_k", 15)),
+        "top_p": float(params.get("top_p", 1.0)),
+        "repetition_penalty": float(params.get("repetition_penalty", 1.35)),
         "media_type": "wav",
         "streaming_mode": False,
         "batch_size": 1,

@@ -31,11 +31,12 @@ def _resolve_device(device: str) -> str:
 
 # ---------------- Generate ----------------
 def generate(text: str, voice_id: str | None, engine: str, device: str,
-             speed: float, out_dir: Path) -> Path:
+             speed: float, out_dir: Path, params: dict | None = None) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     out_path = out_dir / f"tts_{engine}_{stamp}.wav"
     dev = _resolve_device(device)
+    params = params or {}
 
     if not voice_id:
         raise RuntimeError("목소리를 먼저 선택하거나 학습해 주세요.")
@@ -48,7 +49,7 @@ def generate(text: str, voice_id: str | None, engine: str, device: str,
         return engine_f5.generate(text, voice_dir, dev, speed, out_path)
     elif engine == "sovits":
         from . import engine_sovits
-        return engine_sovits.generate(text, voice_dir, dev, speed, out_path)
+        return engine_sovits.generate(text, voice_dir, dev, speed, out_path, params)
     raise NotImplementedError(f"알 수 없는 엔진: {engine}")
 
 

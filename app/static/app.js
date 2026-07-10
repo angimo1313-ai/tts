@@ -74,6 +74,32 @@ ttsText.addEventListener("input", () => ($("#charCount").textContent = ttsText.v
 const speed = $("#speed");
 speed.addEventListener("input", () => ($("#speedVal").textContent = Number(speed.value).toFixed(2) + "×"));
 
+// ---------- Advanced (발음/톤) ----------
+function bindRange(id, valId, fmt) {
+  const el = $("#" + id);
+  const upd = () => ($("#" + valId).textContent = fmt(Number(el.value)));
+  el.addEventListener("input", upd); upd();
+  return el;
+}
+const temperature = bindRange("temperature", "temperatureVal", (v) => v.toFixed(2));
+const topK = bindRange("topK", "topKVal", (v) => String(v));
+const repPen = bindRange("repPen", "repPenVal", (v) => v.toFixed(2));
+
+const PRESETS = {
+  natural:    { temperature: 1.0,  topK: 15, repPen: 1.35 },
+  clear:      { temperature: 0.75, topK: 8,  repPen: 1.5 },
+  expressive: { temperature: 1.15, topK: 25, repPen: 1.2 },
+};
+$$(".chip-btn").forEach((b) =>
+  b.addEventListener("click", () => {
+    const p = PRESETS[b.dataset.preset];
+    if (!p) return;
+    temperature.value = p.temperature; topK.value = p.topK; repPen.value = p.repPen;
+    [temperature, topK, repPen].forEach((el) => el.dispatchEvent(new Event("input")));
+    $$(".chip-btn").forEach((x) => x.classList.toggle("on", x === b));
+  })
+);
+
 // ---------- API helpers ----------
 async function api(path, opts) {
   const res = await fetch(path, opts);
@@ -153,7 +179,11 @@ $("#generateBtn").addEventListener("click", async () => {
     const res = await api("/api/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, voice: SELECTED_VOICE, engine: ENGINE, device: DEVICE, speed: Number(speed.value) }),
+      body: JSON.stringify({
+        text, voice: SELECTED_VOICE, engine: ENGINE, device: DEVICE, speed: Number(speed.value),
+        temperature: Number(temperature.value), top_k: Number(topK.value),
+        repetition_penalty: Number(repPen.value),
+      }),
     });
     const data = await res.json();
     $("#genStatus").textContent = "완료!";

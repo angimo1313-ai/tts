@@ -55,6 +55,31 @@
           </div>
         </div>
 
+        <details class="advanced">
+          <summary>고급 설정 · 발음/톤 (GPT-SoVITS)</summary>
+          <div class="presets">
+            <button type="button" class="chip-btn" data-preset="natural">자연스럽게</button>
+            <button type="button" class="chip-btn" data-preset="clear">또박또박</button>
+            <button type="button" class="chip-btn" data-preset="expressive">감정 풍부</button>
+          </div>
+          <div class="field small">
+            <label for="temperature">안정성 <small>(낮을수록 또박또박·안정, 높을수록 자연스럽지만 변동)</small></label>
+            <input type="range" id="temperature" min="0.5" max="1.4" step="0.05" value="1.0" />
+            <span class="range-val" id="temperatureVal">1.00</span>
+          </div>
+          <div class="field small">
+            <label for="topK">억양 다양성 <small>(높을수록 억양 풍부)</small></label>
+            <input type="range" id="topK" min="1" max="40" step="1" value="15" />
+            <span class="range-val" id="topKVal">15</span>
+          </div>
+          <div class="field small">
+            <label for="repPen">반복 억제 <small>(늘어지는 발음 방지)</small></label>
+            <input type="range" id="repPen" min="1.0" max="2.0" step="0.05" value="1.35" />
+            <span class="range-val" id="repPenVal">1.35</span>
+          </div>
+          <div class="hint">GPT-SoVITS 엔진에만 적용됩니다. 프리셋을 눌러보거나 값을 바꿔 다시 생성해 비교해 보세요.</div>
+        </details>
+
         <div class="actions">
           <button class="btn primary" id="generateBtn">
             <span class="btn-label">생성하기</span>
